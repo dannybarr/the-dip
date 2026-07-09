@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* THE DIP — Terminal Design System
+   Dark-only, data-dense, monospace numerals. All colors HSL tokens. */
+
+@layer base {
+  :root {
+    /* Surfaces */
+    --background: 213 29% 6%;      /* #0B0F14 */
+    --panel: 212 29% 9%;           /* #10161D */
+    --panel-2: 212 29% 12%;        /* #151D26 */
+    --hairline: 211 26% 16%;       /* #1E2833 */
+    --foreground: 210 30% 92%;
+
+    --card: 212 29% 9%;
+    --card-foreground: 210 30% 92%;
+    --popover: 212 29% 8%;
+    --popover-foreground: 210 30% 92%;
+
+    /* Brand: terminal amber */
+    --primary: 40 86% 52%;
+    --primary-foreground: 213 29% 6%;
+    --gold: 40 86% 52%;
+
+    --secondary: 212 29% 14%;
+    --secondary-foreground: 210 30% 92%;
+    --accent: 212 29% 14%;
+    --accent-foreground: 210 30% 92%;
+
+    /* Market direction */
+    --up: 158 57% 46%;
+    --down: 352 90% 62%;
+    --cyanline: 204 66% 53%;
+    --warnhot: 24 88% 56%;
+
+    --muted: 212 24% 14%;
+    --muted-foreground: 212 14% 62%;
+
+    --destructive: 352 90% 62%;
+    --destructive-foreground: 210 30% 92%;
+
+    --border: 211 26% 16%;
+    --input: 212 29% 12%;
+    --ring: 40 86% 52%;
+
+    --radius: 0.25rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "tnum" 1, "cv05" 1;
+  }
+
+  ::selection {
+    background: hsl(var(--gold) / 0.25);
+  }
+
+  /* Recessive scrollbars */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: hsl(var(--background)); }
+  ::-webkit-scrollbar-thumb { background: hsl(var(--hairline)); border-radius: 5px; border: 2px solid hsl(var(--background)); }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(212 20% 26%); }
+}
+
+@layer components {
+  .panel {
+    @apply rounded-md border border-hairline bg-panel;
+  }
+
+  /* Uppercase micro label used across the terminal */
+  .micro {
+    @apply font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground;
+  }
+
+  .num {
+    @apply font-mono tabular-nums;
+  }
+
+  .panel-title {
+    @apply flex items-center gap-2 border-b border-hairline px-3 py-2;
+  }
+
+  .panel-title::before {
+    content: "";
+    @apply block h-3 w-[3px] rounded-sm bg-gold;
+  }
+
+  .row-hover {
+    @apply transition-colors hover:bg-panel-2;
+  }
+}
