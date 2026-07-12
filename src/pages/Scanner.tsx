@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getAnalyses, marketBreadth, VERDICT_ORDER } from "@/lib/engine/market";
+import { computeBreadth, VERDICT_ORDER } from "@/lib/engine/market";
+import { useMarket } from "@/context/MarketProvider";
+import { LoadingView } from "@/components/terminal/DataState";
 import { VERDICT_META, type Verdict } from "@/lib/types";
 import { fmtCap, fmtPct, fmtPrice } from "@/lib/fmt";
 import { VerdictBadge } from "@/components/terminal/VerdictBadge";
@@ -27,13 +29,17 @@ function StatTile({ label, value, sub, tone }: { label: string; value: string; s
 
 export default function Scanner() {
   const navigate = useNavigate();
-  const all = getAnalyses();
-  const breadth = marketBreadth();
+  const { analyses, isLoading } = useMarket();
 
-  const [timeframe, setTimeframe] = useState<Timeframe>("day");
+  const [timeframe, setTimeframe] = useState<Timeframe>("week");
   const [verdictFilter, setVerdictFilter] = useState<Verdict | "ALL">("ALL");
   const [sector, setSector] = useState<string>("ALL");
   const [sortKey, setSortKey] = useState<SortKey>("score");
+
+  // The Dip only underwrites names actually selling off. A genuine dip is a
+  // negative weekly move; everything else is coverage context, not a setup.
+  const all = useMemo(() => analyses.filter((a) => a.isDip), [analyses]);
+  const breadth = useMemo(() => computeBreadth(all), [all]);
 
   const sectors = useMemo(() => ["ALL", ...Array.from(new Set(all.map((a) => a.stock.sector))).sort()], [all]);
 
@@ -52,6 +58,24 @@ export default function Scanner() {
 
   const topConviction = all.filter((a) => a.verdict === "BUY_THE_DIP").slice(0, 3);
   const knives = all.filter((a) => a.verdict === "FALLING_KNIFE" || a.verdict === "AVOID").slice(0, 4);
+
+  if (isLoading) return <LoadingView label="Scanning coverage for dips" />;
+
+  if (all.length === 0) {
+    return (
+      <div className="container max-w-[1480px] py-4">
+        <div className="panel flex flex-col items-center gap-3 px-6 py-20 text-center">
+          <div className="font-mono text-sm font-semibold uppercase tracking-[0.14em] text-foreground">No dips in coverage right now</div>
+          <p className="max-w-md text-xs leading-relaxed text-muted-foreground">
+            The desk's names are green across the board this week: there is nothing selling off to underwrite. The Dip only surfaces genuine drawdowns, so this screen fills up when the market does the opposite. Check back when the tape turns.
+          </p>
+          <Link to="/methodology" className="mt-2 font-mono text-[11px] uppercase tracking-wider text-gold hover:underline">
+            Read the desk doctrine →
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const Th = ({ children, k, className }: { children: React.ReactNode; k?: SortKey; className?: string }) => (
     <th
@@ -78,6 +102,7 @@ export default function Scanner() {
       <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
         <div className="space-y-4">
           {/* Highest conviction */}
+          {topConviction.length > 0 && (
           <section className="panel">
             <div className="panel-title">
               <h2 className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-foreground">Desk Highest Conviction</h2>
@@ -106,6 +131,7 @@ export default function Scanner() {
               ))}
             </div>
           </section>
+          )}
 
           {/* Scanner table */}
           <section className="panel">
@@ -220,6 +246,7 @@ export default function Scanner() {
 
         {/* Side rail */}
         <aside className="space-y-4">
+          {knives.length > 0 && (
           <section className="panel">
             <div className="panel-title">
               <h2 className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-foreground">Do Not Catch</h2>
@@ -237,16 +264,17 @@ export default function Scanner() {
               ))}
             </div>
           </section>
+          )}
 
           <section className="panel">
             <div className="panel-title">
               <h2 className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-foreground">Desk Doctrine</h2>
             </div>
             <div className="space-y-3 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
-              <p><span className="font-semibold text-gold">01</span> — Price falling is information, not opportunity. The catalyst decides which.</p>
-              <p><span className="font-semibold text-gold">02</span> — We buy transient problems in permanent businesses. Never the reverse.</p>
-              <p><span className="font-semibold text-gold">03</span> — Capitulation volume marks transfers from weak hands to strong. Be the strong hands.</p>
-              <p><span className="font-semibold text-gold">04</span> — Every entry has a stop, a target, and a size before it has a fill.</p>
+              <p><span className="font-semibold text-gold">01</span>: Price falling is information, not opportunity. The catalyst decides which.</p>
+              <p><span className="font-semibold text-gold">02</span>: We buy transient problems in permanent businesses. Never the reverse.</p>
+              <p><span className="font-semibold text-gold">03</span>: Capitulation volume marks transfers from weak hands to strong. Be the strong hands.</p>
+              <p><span className="font-semibold text-gold">04</span>: Every entry has a stop, a target, and a size before it has a fill.</p>
               <p>
                 <Link to="/methodology" className="text-gold underline-offset-2 hover:underline">Full methodology →</Link>
               </p>

@@ -31,14 +31,16 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
 
 /** One-year price tape with the trade plan levels drawn on the right edge. */
 export function PriceChart({ analysis, window: win = 252 }: Props) {
-  const { series, plan, technicals, stock } = analysis;
+  const { series, plan, technicals, stock, verdict, isDip } = analysis;
   const data = series.slice(-win);
   const dipping = stock.dipPctWeek < 0;
   const lineColor = dipping ? CHART.down : CHART.up;
+  // Plan levels are only meaningful for a genuine, tradeable dip.
+  const showPlan = isDip && verdict !== "FALLING_KNIFE" && verdict !== "AVOID";
 
   const lows = data.map((p) => p.c);
-  const yMin = Math.min(...lows, plan.stop) * 0.97;
-  const yMax = Math.max(...lows, plan.target2) * 1.03;
+  const yMin = Math.min(...lows, showPlan ? plan.stop : Infinity) * 0.97;
+  const yMax = Math.max(...lows, showPlan ? plan.target2 : -Infinity) * 1.03;
   const fmtLevel = (v: number) => (yMax < 25 ? v.toFixed(2) : yMax < 100 ? v.toFixed(1) : v.toFixed(0));
 
   const refLabel = (text: string, color: string) => ({
@@ -78,14 +80,18 @@ export function PriceChart({ analysis, window: win = 252 }: Props) {
         />
         <Tooltip content={<ChartTooltip />} cursor={{ stroke: CHART.axis, strokeDasharray: "3 3" }} />
 
-        <ReferenceLine y={plan.target2} stroke={CHART.up} strokeDasharray="4 4" strokeOpacity={0.7} label={refLabel(`T2 ${fmtLevel(plan.target2)}`, CHART.up)} />
-        {plan.target2 - plan.target1 > (yMax - yMin) * 0.02 && (
+        {showPlan && (
+          <ReferenceLine y={plan.target2} stroke={CHART.up} strokeDasharray="4 4" strokeOpacity={0.7} label={refLabel(`T2 ${fmtLevel(plan.target2)}`, CHART.up)} />
+        )}
+        {showPlan && plan.target2 - plan.target1 > (yMax - yMin) * 0.02 && (
           <ReferenceLine y={plan.target1} stroke={CHART.up} strokeDasharray="4 4" strokeOpacity={0.5} label={refLabel(`T1 ${fmtLevel(plan.target1)}`, CHART.up)} />
         )}
         {technicals.supportDefined && (
           <ReferenceLine y={technicals.supportLevel} stroke={CHART.cyan} strokeDasharray="4 4" strokeOpacity={0.7} label={refLabel(`SUP ${fmtLevel(technicals.supportLevel)}`, CHART.cyan)} />
         )}
-        <ReferenceLine y={plan.stop} stroke={CHART.down} strokeDasharray="4 4" strokeOpacity={0.8} label={refLabel(`STOP ${fmtLevel(plan.stop)}`, CHART.down)} />
+        {showPlan && (
+          <ReferenceLine y={plan.stop} stroke={CHART.down} strokeDasharray="4 4" strokeOpacity={0.8} label={refLabel(`STOP ${fmtLevel(plan.stop)}`, CHART.down)} />
+        )}
 
         <Area type="monotone" dataKey="c" stroke="none" fill={`url(#fill-${stock.ticker})`} isAnimationActive={false} />
         <Line type="monotone" dataKey="c" stroke={lineColor} strokeWidth={1.6} dot={false} isAnimationActive={false} />

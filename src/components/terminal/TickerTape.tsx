@@ -1,10 +1,11 @@
 import { Link } from "react-router-dom";
-import { getAnalyses } from "@/lib/engine/market";
+import { useMarket } from "@/context/MarketProvider";
 import { fmtPct, fmtPrice } from "@/lib/fmt";
 
 /** Scrolling coverage tape under the header — every name links to its analysis. */
 export function TickerTape() {
-  const items = getAnalyses();
+  const { analyses: items } = useMarket();
+  if (items.length === 0) return null;
   const strip = (
     <div className="flex shrink-0 items-center">
       {items.map((a) => (

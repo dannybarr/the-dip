@@ -169,4 +169,7 @@ export interface Analysis {
   thesis: string;
   riskFlags: string[];
   plan: TradePlan;
+  /** True when the name is in a genuine weekly dip (dipPctWeek < 0). The dip
+   *  engine's thesis and trade plan are only meaningful when this holds. */
+  isDip: boolean;
 }

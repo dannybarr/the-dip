@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getAnalysis } from "@/lib/engine/market";
+import { useMarket } from "@/context/MarketProvider";
 import { fmtPct, fmtPrice } from "@/lib/fmt";
 import { useWatchlist, watchlistStore } from "@/lib/watchlist";
+import { OVERLAY_BY_TICKER } from "@/data/coverage";
 import { VerdictBadge } from "@/components/terminal/VerdictBadge";
 import { ScoreBar } from "@/components/terminal/ScoreMeter";
 import { Sparkline } from "@/components/terminal/Sparkline";
@@ -51,11 +52,12 @@ function EntryCell({ ticker, entryPrice, sizePct }: { ticker: string; entryPrice
 export default function Watchlist() {
   const navigate = useNavigate();
   const positions = useWatchlist();
-  const rows = positions
-    .map((p) => ({ pos: p, analysis: getAnalysis(p.ticker) }))
-    .filter((r) => r.analysis);
+  const { byTicker } = useMarket();
+  const rows = positions.map((p) => ({ pos: p, analysis: byTicker(p.ticker) }));
+  const covered = rows.filter((r) => r.analysis);
+  const uncovered = rows.filter((r) => !r.analysis);
 
-  const entered = rows.filter((r) => r.pos.entryPrice != null);
+  const entered = covered.filter((r) => r.pos.entryPrice != null);
   const totalPnlPct =
     entered.length > 0
       ? entered.reduce((sum, r) => sum + ((r.analysis!.stock.price / r.pos.entryPrice! - 1) * 100) * (r.pos.sizePct ?? 0), 0) /
@@ -77,7 +79,7 @@ export default function Watchlist() {
         )}
       </div>
 
-      {rows.length === 0 ? (
+      {positions.length === 0 ? (
         <div className="panel flex flex-col items-center gap-3 px-6 py-16 text-center">
           <div className="font-mono text-sm font-semibold uppercase tracking-wider text-foreground">Nothing under watch</div>
           <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">
@@ -98,7 +100,7 @@ export default function Watchlist() {
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ pos, analysis }) => {
+              {covered.map(({ pos, analysis }) => {
                 const a = analysis!;
                 const pnl = pos.entryPrice != null ? (a.stock.price / pos.entryPrice - 1) * 100 : null;
                 return (
@@ -125,6 +127,29 @@ export default function Watchlist() {
                         <td className="num px-3 py-2.5 text-up">${fmtPrice(a.plan.target1)}</td>
                       </>
                     )}
+                    <td className="px-3 py-2.5">
+                      <button
+                        onClick={() => watchlistStore.toggle(pos.ticker)}
+                        aria-label={`Remove ${pos.ticker}`}
+                        className="text-muted-foreground transition-colors hover:text-down"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+              {uncovered.map(({ pos }) => {
+                const overlay = OVERLAY_BY_TICKER[pos.ticker];
+                return (
+                  <tr key={pos.ticker} className="border-b border-hairline/60 opacity-60 last:border-0">
+                    <td className="px-3 py-2.5">
+                      <div className="font-mono text-sm font-bold text-muted-foreground">{pos.ticker}</div>
+                      <div className="text-[11px] text-muted-foreground">{overlay?.name ?? "Not in coverage"}</div>
+                    </td>
+                    <td colSpan={10} className="micro px-3 py-2.5 normal-case tracking-normal text-muted-foreground">
+                      Not covered in the current data mode: no live or simulated read is available for this name right now. Your position is preserved.
+                    </td>
                     <td className="px-3 py-2.5">
                       <button
                         onClick={() => watchlistStore.toggle(pos.ticker)}

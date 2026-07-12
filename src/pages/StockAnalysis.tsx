@@ -1,5 +1,6 @@
 import { Link, useParams } from "react-router-dom";
-import { getAnalysis, getAnalyses } from "@/lib/engine/market";
+import { useMarket } from "@/context/MarketProvider";
+import { LoadingView } from "@/components/terminal/DataState";
 import { CATALYST_LABELS, VERDICT_META } from "@/lib/types";
 import { fmtCap, fmtPct, fmtPct1, fmtPrice, fmtX } from "@/lib/fmt";
 import { PriceChart } from "@/components/terminal/PriceChart";
@@ -44,13 +45,16 @@ function PlanCell({ label, value, tone, hint }: { label: string; value: string; 
 
 export default function StockAnalysis() {
   const { ticker = "" } = useParams();
-  const analysis = getAnalysis(ticker);
+  const { analyses, byTicker, isLoading } = useMarket();
+  const analysis = byTicker(ticker);
   const watched = useIsWatched(ticker.toUpperCase());
+
+  if (isLoading) return <LoadingView label={`Loading ${ticker.toUpperCase()}`} />;
 
   if (!analysis) {
     return (
       <div className="container py-16 text-center">
-        <div className="font-mono text-2xl font-bold text-foreground">{ticker.toUpperCase()} — NOT IN COVERAGE</div>
+        <div className="font-mono text-2xl font-bold text-foreground">{ticker.toUpperCase()}: NOT IN COVERAGE</div>
         <p className="mt-2 text-sm text-muted-foreground">The desk hasn't underwritten this name yet.</p>
         <Link to="/" className="mt-6 inline-block font-mono text-xs uppercase tracking-wider text-gold hover:underline">
           ← Back to scanner
@@ -59,9 +63,9 @@ export default function StockAnalysis() {
     );
   }
 
-  const { stock: s, technicals: t, plan, pillars, dipScore, verdict, conviction, thesis, riskFlags } = analysis;
+  const { stock: s, technicals: t, plan, pillars, dipScore, verdict, conviction, thesis, riskFlags, isDip } = analysis;
   const f = s.fundamentals;
-  const peers = s.peers.map((p) => getAnalyses().find((a) => a.stock.ticker === p)).filter(Boolean);
+  const peers = s.peers.map((p) => analyses.find((a) => a.stock.ticker === p)).filter(Boolean);
 
   return (
     <div className="container max-w-[1480px] space-y-4 py-4">
@@ -107,7 +111,7 @@ export default function StockAnalysis() {
             <span className="micro">Catalyst: {CATALYST_LABELS[s.catalyst.type]}</span>
           </div>
           <p className="mt-3 max-w-3xl text-sm leading-relaxed text-foreground/90">{thesis}</p>
-          <p className="mt-2 text-xs italic text-muted-foreground">“{s.deskNote}”<span className="not-italic"> — Desk note</span></p>
+          <p className="mt-2 text-xs italic text-muted-foreground">“{s.deskNote}”<span className="not-italic"> (Desk note)</span></p>
         </div>
       </section>
 
@@ -130,13 +134,21 @@ export default function StockAnalysis() {
               <h2 className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-foreground">Trade Plan</h2>
               <span className="micro ml-auto">{VERDICT_META[verdict].action}</span>
             </div>
-            {verdict === "FALLING_KNIFE" || verdict === "AVOID" ? (
+            {!isDip ? (
+            <div className="flex flex-col gap-3 p-5 md:flex-row md:items-center md:gap-6">
+              <div className="font-mono text-lg font-bold uppercase tracking-wider text-muted-foreground">No active dip</div>
+              <p className="max-w-xl text-[13px] leading-relaxed text-muted-foreground">
+                {s.ticker} is not selling off this week, so there is no dip to trade and the desk publishes no levels.
+                This page is standing coverage: the thesis, moat and valuation read stay current so the name is ready to underwrite the moment it actually drops.
+              </p>
+            </div>
+            ) : verdict === "FALLING_KNIFE" || verdict === "AVOID" ? (
             <div className="flex flex-col gap-3 p-5 md:flex-row md:items-center md:gap-6">
               <div className="font-mono text-lg font-bold uppercase tracking-wider text-down">No levels published</div>
               <p className="max-w-xl text-[13px] leading-relaxed text-muted-foreground">
-                The desk does not construct entries where expected value is negative — a price target on a{" "}
+                The desk does not construct entries where expected value is negative: a price target on a{" "}
                 {verdict === "AVOID" ? "structurally impaired business" : "falling knife"} is an invitation, not a plan.
-                Re-underwrite {verdict === "AVOID" ? "if the balance-sheet or demand picture changes sign" : "after the tape stabilizes: a higher low on declining volume, or a reclaimed short-term moving average"}.
+                Re-underwrite {verdict === "AVOID" ? "if the balance-sheet or demand picture changes sign" : "after the tape stabilizes, on a higher low with declining volume or a reclaimed short-term moving average"}.
               </p>
             </div>
             ) : (
@@ -156,8 +168,8 @@ export default function StockAnalysis() {
           {/* Catalyst */}
           <section className="panel">
             <div className="panel-title">
-              <h2 className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-foreground">Why It's Down</h2>
-              <span className="micro ml-auto">{s.catalyst.date} · {CATALYST_LABELS[s.catalyst.type]}</span>
+              <h2 className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-foreground">Catalyst Read</h2>
+              <span className="micro ml-auto">{s.catalyst.date ? `${s.catalyst.date} · ` : "Desk thesis · "}{CATALYST_LABELS[s.catalyst.type]}</span>
             </div>
             <div className="p-4">
               <h3 className="text-sm font-semibold text-foreground">{s.catalyst.headline}</h3>
@@ -263,7 +275,7 @@ export default function StockAnalysis() {
               <Row label="52W Range" value={`$${fmtPrice(t.low52w)} – $${fmtPrice(t.high52w)}`} />
               <Row label="Off 52W High" value={fmtPct1(t.drawdownFrom52wHighPct)} tone="down" />
               <Row label="Dip Z-Score (1W)" value={`${t.dipZScore.toFixed(1)}σ`} tone={t.dipZScore >= 2 ? "gold" : undefined} />
-              <Row label="Support Shelf" value={t.supportDefined ? `$${fmtPrice(t.supportLevel)}` : "None — new lows"} tone={t.supportDefined ? undefined : "down"} />
+              <Row label="Support Shelf" value={t.supportDefined ? `$${fmtPrice(t.supportLevel)}` : "None, new lows"} tone={t.supportDefined ? undefined : "down"} />
               <Row label="Realized Vol (30D)" value={fmtPct1(t.realizedVol30dPct, false)} />
               <Row label="Volume vs 90D Avg" value={`${s.volumeRatio.toFixed(1)}x`} tone={s.volumeRatio >= 2.5 ? "gold" : undefined} />
               <Row label="Short Interest" value={fmtPct1(s.shortInterestPct, false)} />

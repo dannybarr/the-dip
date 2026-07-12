@@ -1,6 +1,7 @@
 import type {
   Analysis,
   PillarScore,
+  PricePoint,
   StockInput,
   Technicals,
   TradePlan,
@@ -35,7 +36,7 @@ function scoreQuality(s: StockInput): PillarScore {
   if (score >= 70)
     note = `Franchise-grade operator: ${f.roicPct.toFixed(0)}% ROIC on ${f.grossMarginPct.toFixed(0)}% gross margins with a defensible moat. This is the profile that historically closes dip gaps.`;
   else if (score >= 45)
-    note = `Adequate but not elite economics — ${f.roicPct.toFixed(0)}% ROIC, ${f.opMarginPct.toFixed(0)}% operating margin. Recovery depends more on the catalyst clearing than on business gravity.`;
+    note = `Adequate but not elite economics: ${f.roicPct.toFixed(0)}% ROIC, ${f.opMarginPct.toFixed(0)}% operating margin. Recovery depends more on the catalyst clearing than on business gravity.`;
   else
     note = `Weak underlying economics (${f.roicPct.toFixed(0)}% ROIC, ${f.netDebtToEbitda.toFixed(1)}x net debt/EBITDA). There is no quality floor under this price.`;
   return { key: "quality", score: Math.round(score), note };
@@ -59,7 +60,7 @@ function scoreValuation(s: StockInput): PillarScore {
   if (score >= 65)
     note = `Genuine discount: ${f.peForward.toFixed(0)}x forward earnings vs a ${f.pe5yAvg.toFixed(0)}x five-year norm (${discount.toFixed(0)}% below), with a ${f.fcfYieldPct.toFixed(1)}% FCF yield paying you to wait.`;
   else if (score >= 40)
-    note = `The reset removed froth rather than creating a bargain — ${f.peForward.toFixed(0)}x forward vs ${f.pe5yAvg.toFixed(0)}x historical average. Fairly priced for the new facts.`;
+    note = `The reset removed froth rather than creating a bargain: ${f.peForward.toFixed(0)}x forward vs ${f.pe5yAvg.toFixed(0)}x historical average. Fairly priced for the new facts.`;
   else
     note = `Still expensive after the fall (${f.peForward.toFixed(0)}x forward, ${f.fcfYieldPct.toFixed(1)}% FCF yield). The dip corrected valuation, it did not create opportunity.`;
   return { key: "valuation", score: Math.round(score), note };
@@ -81,7 +82,7 @@ function scoreDipCharacter(s: StockInput, t: Technicals): PillarScore {
   if (score >= 65)
     note = `Classic capitulation signature: a ${t.dipZScore.toFixed(1)}σ weekly move on ${s.volumeRatio.toFixed(1)}x average volume. Forced sellers, not patient ones, set this price.`;
   else if (score >= 40)
-    note = `Meaningful but orderly repricing (${t.dipZScore.toFixed(1)}σ, ${s.volumeRatio.toFixed(1)}x volume). Sellers are deliberate — the tape is digesting new information, not panicking.`;
+    note = `Meaningful but orderly repricing (${t.dipZScore.toFixed(1)}σ, ${s.volumeRatio.toFixed(1)}x volume). Sellers are deliberate: the tape is digesting new information, not panicking.`;
   else
     note = `A slow bleed, not a flush: the stock is ${Math.abs(t.drawdownFrom52wHighPct).toFixed(0)}% off its high without a volume climax. Persistent distribution tends to persist.`;
   return { key: "dipCharacter", score: Math.round(score), note };
@@ -102,7 +103,7 @@ function scoreCatalyst(s: StockInput): PillarScore {
   if (score >= 65)
     note = `${label}: the driver is transient (${c.transience}/10) with limited earnings impairment (severity ${c.severity}/10). Time is on the buyer's side.`;
   else if (score >= 40)
-    note = `${label}: partially structural. Some earnings power is genuinely lost (severity ${c.severity}/10) — underwrite the new baseline, not the old one.`;
+    note = `${label}: partially structural. Some earnings power is genuinely lost (severity ${c.severity}/10); underwrite the new baseline, not the old one.`;
   else
     note = `${label}: this is thesis damage, not noise (severity ${c.severity}/10, transience ${c.transience}/10). The market is repricing the business, and it is probably right.`;
   return { key: "catalyst", score: Math.round(score), note };
@@ -122,11 +123,11 @@ function scoreTechnical(s: StockInput, t: Technicals): PillarScore {
 
   let note: string;
   if (!t.supportDefined)
-    note = `RSI ${t.rsi14.toFixed(0)}, but the stock is in open price discovery at fresh 52-week lows — there is no defended shelf beneath this print, so risk cannot be defined technically.`;
+    note = `RSI ${t.rsi14.toFixed(0)}, but the stock is in open price discovery at fresh 52-week lows. There is no defended shelf beneath this print, so risk cannot be defined technically.`;
   else if (score >= 65)
     note = `Deeply oversold (RSI ${t.rsi14.toFixed(0)}) and sitting ${(((s.price - t.supportLevel) / s.price) * 100).toFixed(1)}% above a well-defended shelf at $${t.supportLevel.toFixed(2)}. Risk is definable here.`;
   else if (score >= 40)
-    note = `Stretched but not extreme — RSI ${t.rsi14.toFixed(0)}, support at $${t.supportLevel.toFixed(2)}. A tradeable level exists, though the tape hasn't fully reset.`;
+    note = `Stretched but not extreme: RSI ${t.rsi14.toFixed(0)}, support at $${t.supportLevel.toFixed(2)}. A tradeable level exists, though the tape hasn't fully reset.`;
   else
     note = `No technical floor in sight: RSI ${t.rsi14.toFixed(0)} with the 200-day at $${t.sma200.toFixed(2)} ${s.price < t.sma200 ? "overhead as resistance" : "far below"}. Structure must repair first.`;
   return { key: "technical", score: Math.round(score), note };
@@ -145,7 +146,7 @@ function scoreFlow(s: StockInput, quality: number): PillarScore {
   if (score >= 60)
     note = `${s.shortInterestPct.toFixed(1)}% short interest against a sound business is squeeze fuel; ${s.volumeRatio.toFixed(1)}x volume says weak hands are already transferring shares.`;
   else if (score >= 40)
-    note = `Positioning is unremarkable — ${s.shortInterestPct.toFixed(1)}% short interest, ${s.volumeRatio.toFixed(1)}x volume. Flow won't drive the recovery; fundamentals must.`;
+    note = `Positioning is unremarkable: ${s.shortInterestPct.toFixed(1)}% short interest, ${s.volumeRatio.toFixed(1)}x volume. Flow won't drive the recovery; fundamentals must.`;
   else
     note = `Crowded and informed bears (${s.shortInterestPct.toFixed(1)}% short interest) with no capitulation volume. The smart money on the other side has done its work.`;
   return { key: "flow", score: Math.round(score), note };
@@ -223,37 +224,45 @@ function buildRiskFlags(s: StockInput, t: Technicals, pillars: PillarScore[]): s
   const flags: string[] = [];
   const f = s.fundamentals;
   if (f.netDebtToEbitda > 2.5) flags.push(`Leverage: ${f.netDebtToEbitda.toFixed(1)}x net debt/EBITDA narrows the margin for error.`);
-  if (s.catalyst.severity >= 6) flags.push("Catalyst carries real earnings impairment — the old baseline no longer applies.");
+  if (s.catalyst.severity >= 6) flags.push("Catalyst carries real earnings impairment. The old baseline no longer applies.");
   if (s.price < t.sma200) flags.push("Trading below the 200-day moving average; the primary trend is against the position.");
-  if (!t.supportDefined) flags.push("At fresh 52-week lows in open price discovery — no structural support exists beneath the print.");
+  if (!t.supportDefined) flags.push("At fresh 52-week lows in open price discovery. No structural support exists beneath the print.");
   if (t.realizedVol30dPct > 45) flags.push(`Realized volatility of ${t.realizedVol30dPct.toFixed(0)}% demands reduced sizing.`);
   if (s.shortInterestPct > 10 && (pillars.find((p) => p.key === "quality")?.score ?? 0) < 50)
-    flags.push(`${s.shortInterestPct.toFixed(0)}% short interest on a weak business — bears are usually early, not wrong.`);
+    flags.push(`${s.shortInterestPct.toFixed(0)}% short interest on a weak business: bears are usually early, not wrong.`);
   if (f.peForward > f.sectorPe * 1.4) flags.push("Still commands a large sector premium; multiple compression risk remains.");
-  if (Math.abs(t.drawdownFrom52wHighPct) > 40) flags.push("Down over 40% from the high — recoveries from this depth take quarters, not weeks.");
+  if (Math.abs(t.drawdownFrom52wHighPct) > 40) flags.push("Down over 40% from the high: recoveries from this depth take quarters, not weeks.");
   if (flags.length === 0) flags.push("No disqualifying risk flags. Standard stop discipline applies.");
   return flags;
 }
 
 function buildThesis(s: StockInput, t: Technicals, dipScore: number, verdict: Verdict): string {
   const v = VERDICT_META[verdict];
+  // When the name isn't actually falling this week, there is no dip to
+  // underwrite — say so plainly rather than forcing a dip narrative.
+  if (s.dipPctWeek >= 0) {
+    const dayWord = s.dipPctDay < 0 ? `off ${Math.abs(s.dipPctDay).toFixed(1)}% today but ` : "";
+    return `${s.ticker} is ${dayWord}up ${s.dipPctWeek.toFixed(1)}% on the week: it is not in a dip. The desk publishes no entry here; this page is coverage context until the tape actually sells off. Standing view: ${s.deskNote}`;
+  }
   const move = `${s.ticker} is off ${Math.abs(s.dipPctWeek).toFixed(1)}% on the week (${Math.abs(s.dipPctDay).toFixed(1)}% today) on ${CATALYST_LABELS[s.catalyst.type].toLowerCase()}`;
   switch (verdict) {
     case "BUY_THE_DIP":
-      return `${move} — a ${t.dipZScore.toFixed(1)}σ dislocation in a business whose earnings power is substantially intact. The desk's read: the market is pricing a transient problem as a permanent one. ${v.action}`;
+      return `${move}: a ${t.dipZScore.toFixed(1)}σ dislocation in a business whose earnings power is substantially intact. The desk's read: the market is pricing a transient problem as a permanent one. ${v.action}`;
     case "ACCUMULATE":
       return `${move}. The reset is real but so is the franchise. Rather than calling the exact low, scale in across the entry zone and let the position build as the catalyst burns off. ${v.action}`;
     case "WATCHLIST":
-      return `${move}. The dip has removed excess without creating a clear bargain, and the catalyst has genuine substance. There is no edge in being first here — ${v.action.toLowerCase()}`;
+      return `${move}. The dip has removed excess without creating a clear bargain, and the catalyst has genuine substance. There is no edge in being first here: ${v.action.toLowerCase()}`;
     case "FALLING_KNIFE":
-      return `${move}, and the selling is orderly rather than climactic — the signature of repricing, not panic. History says this pattern continues lower before it stabilizes. ${v.action}`;
+      return `${move}, and the selling is orderly rather than climactic: the signature of repricing, not panic. History says this pattern continues lower before it stabilizes. ${v.action}`;
     case "AVOID":
       return `${move}, but the problem is the business, not the tape. Earnings power is impaired and the balance sheet offers no floor. ${v.action}`;
   }
 }
 
-export function analyze(stock: StockInput): Analysis {
-  const series = buildSeries(stock);
+export function analyze(stock: StockInput, realSeries?: PricePoint[]): Analysis {
+  // Prefer a genuine price history when the live provider supplies one; fall
+  // back to the deterministic synthetic series for the simulated snapshot.
+  const series = realSeries && realSeries.length >= 60 ? realSeries : buildSeries(stock);
   const technicals = computeTechnicals(stock, series);
 
   const quality = scoreQuality(stock);
@@ -275,6 +284,7 @@ export function analyze(stock: StockInput): Analysis {
   const plan = buildPlan(stock, technicals, dipScore, verdict);
   const riskFlags = buildRiskFlags(stock, technicals, pillars);
   const thesis = buildThesis(stock, technicals, dipScore, verdict);
+  const isDip = stock.dipPctWeek < 0;
 
-  return { stock, series, technicals, pillars, dipScore, verdict, conviction, thesis, riskFlags, plan };
+  return { stock, series, technicals, pillars, dipScore, verdict, conviction, thesis, riskFlags, plan, isDip };
 }

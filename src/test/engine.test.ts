@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { UNIVERSE } from "@/data/universe";
+import { SIMULATED_UNIVERSE } from "@/data/simulated";
 import { analyze } from "@/lib/engine/analyst";
 import { buildSeries } from "@/lib/engine/series";
 import { rsi14 } from "@/lib/engine/indicators";
@@ -7,7 +7,7 @@ import { PILLAR_META, type PillarKey } from "@/lib/types";
 
 describe("price series model", () => {
   it("terminates exactly at the quoted price with the quoted daily move", () => {
-    for (const stock of UNIVERSE) {
+    for (const stock of SIMULATED_UNIVERSE) {
       const series = buildSeries(stock);
       const last = series[series.length - 1].c;
       const prev = series[series.length - 2].c;
@@ -17,7 +17,7 @@ describe("price series model", () => {
   });
 
   it("reproduces the weekly dip over the final five sessions", () => {
-    for (const stock of UNIVERSE) {
+    for (const stock of SIMULATED_UNIVERSE) {
       const series = buildSeries(stock);
       const preDip = series[series.length - 6].c;
       const weekMove = (series[series.length - 1].c / preDip - 1) * 100;
@@ -26,8 +26,8 @@ describe("price series model", () => {
   });
 
   it("is deterministic across runs", () => {
-    const a = buildSeries(UNIVERSE[0]);
-    const b = buildSeries(UNIVERSE[0]);
+    const a = buildSeries(SIMULATED_UNIVERSE[0]);
+    const b = buildSeries(SIMULATED_UNIVERSE[0]);
     expect(a).toEqual(b);
   });
 });
@@ -42,7 +42,7 @@ describe("indicators", () => {
 });
 
 describe("analyst engine", () => {
-  const analyses = UNIVERSE.map(analyze);
+  const analyses = SIMULATED_UNIVERSE.map(analyze);
 
   it("keeps pillar weights summing to 1", () => {
     const total = (Object.keys(PILLAR_META) as PillarKey[]).reduce((s, k) => s + PILLAR_META[k].weight, 0);
@@ -90,5 +90,16 @@ describe("analyst engine", () => {
   it("spreads verdicts across the spectrum (the engine discriminates)", () => {
     const verdicts = new Set(analyses.map((a) => a.verdict));
     expect(verdicts.size).toBeGreaterThanOrEqual(4);
+  });
+
+  it("flags every simulated name as a genuine dip", () => {
+    for (const a of analyses) expect(a.isDip).toBe(true);
+  });
+
+  it("treats a name that is up on the week as not a dip", () => {
+    const rallying = { ...SIMULATED_UNIVERSE[0], dipPctDay: 1.2, dipPctWeek: 8.5 };
+    const a = analyze(rallying);
+    expect(a.isDip).toBe(false);
+    expect(a.thesis).toMatch(/not in a dip/i);
   });
 });
