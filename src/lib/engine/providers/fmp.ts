@@ -7,15 +7,39 @@
  * qualitative pillars (catalyst read, moat, balance-sheet rating, bull/bear,
  * desk note) are analyst judgments and live in the coverage overlay, not here.
  *
- * Key handling: read from import.meta.env.VITE_FMP_API_KEY. Absent key → callers
- * fall back to the simulated snapshot. Responses are cached in localStorage so a
- * session stays well inside the free-tier daily request budget.
+ * Key handling — two paths:
+ *   • Local dev (`npm run dev`): calls FMP directly using VITE_FMP_API_KEY from
+ *     .env.local. Convenient, and the key never leaves your machine.
+ *   • Production (the deployed site): calls the `/api/fmp` serverless proxy,
+ *     which holds the key server-side. The key is never in the browser bundle.
+ * Absent key / failed proxy → callers fall back to the simulated snapshot.
+ * Responses are cached in localStorage so a session stays inside the budget.
  */
 
 const BASE = "https://financialmodelingprep.com/stable";
 
+// In a production build we route every request through the serverless proxy so
+// the API key stays server-side. In dev we hit FMP directly with the local key.
+const USE_PROXY: boolean = import.meta.env.PROD;
+
 export const FMP_KEY: string | undefined = import.meta.env.VITE_FMP_API_KEY;
-export const hasFmpKey = (): boolean => typeof FMP_KEY === "string" && FMP_KEY.length > 0;
+
+// Live data is available when the proxy is in play (production) or when a local
+// key is present (dev). In production the proxy owns the key, so this is true
+// even though the browser has none; a missing server key fails gracefully to
+// the simulated snapshot via the callers' existing error handling.
+export const hasFmpKey = (): boolean =>
+  USE_PROXY || (typeof FMP_KEY === "string" && FMP_KEY.length > 0);
+
+/** Builds the request URL: the proxy in production, FMP direct in dev. */
+function requestUrl(path: string, params: Record<string, string>): string {
+  if (USE_PROXY) {
+    const qs = new URLSearchParams({ ...params, path }).toString();
+    return `/api/fmp?${qs}`;
+  }
+  const qs = new URLSearchParams({ ...params, apikey: FMP_KEY ?? "" }).toString();
+  return `${BASE}/${path}?${qs}`;
+}
 
 /** Thrown when FMP reports a plan/rate restriction rather than a data problem. */
 export class FmpAccessError extends Error {}
@@ -56,12 +80,11 @@ function cacheSet(key: string, data: unknown): void {
 // Fetch with TTL cache and honest error surfacing.
 // ---------------------------------------------------------------------------
 async function fmpGet<T>(path: string, params: Record<string, string>, ttlMs: number): Promise<T> {
-  const qs = new URLSearchParams({ ...params, apikey: FMP_KEY ?? "" }).toString();
   const key = `fmp:${path}?${new URLSearchParams(params).toString()}`;
   const cached = cacheGet<T>(key, ttlMs);
   if (cached !== undefined) return cached;
 
-  const res = await fetch(`${BASE}/${path}?${qs}`);
+  const res = await fetch(requestUrl(path, params));
   if (!res.ok) {
     if (res.status === 401 || res.status === 403) throw new FmpAccessError(`FMP auth/plan error (${res.status})`);
     if (res.status === 429) throw new FmpAccessError("FMP rate limit reached");
@@ -84,7 +107,7 @@ async function fmpGet<T>(path: string, params: Record<string, string>, ttlMs: nu
 // TTLs — fundamentals move quarterly, prices intraday.
 // ---------------------------------------------------------------------------
 const TTL_FUNDAMENTALS = 12 * 60 * 60 * 1000; // 12h
-const TTL_PRICES = 15 * 60 * 1000; // 15m
+const TTL_PRICES = 60 * 1000; // 1m — short so a reload refetches through the edge cache
 const TTL_SECTOR = 6 * 60 * 60 * 1000; // 6h
 
 // ---------------------------------------------------------------------------
