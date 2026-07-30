@@ -12,10 +12,13 @@ horizon:            # §2 swing sweet spot: 3d–4wk
   min_hold_days: 3
   max_hold_days: 20     # vertical barrier
 
-labeling:           # §4 triple-barrier (ATR-scaled)
+labeling:           # §4 triple-barrier (ATR-scaled). Breakeven win-prob = sl/(pt+sl).
   profit_take_atr: 2.0
-  stop_loss_atr: 1.0
-  vertical_days: 15
+  stop_loss_atr: 1.5    # breakeven ~0.43 — winnable, still positive payoff asymmetry
+  vertical_days: 20     # give the swing thesis time to resolve
+  # Cap barrier width as a % of entry. Post-shock ATR spikes would otherwise create
+  # ~10% stops (bad risk geometry that also drowns the recovery signal in noise).
+  max_barrier_pct: 0.06
 
 features:           # §3 lookbacks in days/weeks
   momentum_windows: [5, 10, 20, 50]
@@ -37,13 +40,13 @@ model:              # §5
     learning_rate: 0.05
     max_iter: 300
     l2_regularization: 1.0
-    min_samples_leaf: 40
+    min_samples_leaf: 20    # small enough to isolate the (rare) catalyst-edge rows
 
 strategy:           # §5 conviction, §7 principle gates
   # Barriers are 2:1 (pt 2*ATR / sl 1*ATR) so BREAKEVEN win-prob ~= 0.33. Floors are
   # set above breakeven with margin so we only act on a genuine, sized edge.
-  min_conviction: 0.05      # skip marginal setups (JPM discipline)
-  min_edge: 0.42            # calibrated P(win) floor (breakeven 0.33 + margin)
+  min_conviction: 0.04      # skip marginal setups (JPM discipline)
+  min_edge: 0.45            # calibrated P(win) floor (breakeven 0.43 + margin)
   quality_gate: true        # buy discounted QUALITY, not cheap garbage
   require_catalyst_or_value: true
 
@@ -61,7 +64,7 @@ backtest:           # §6 honesty
   commission_bps: 2.0       # 2 bps per side
   slippage_bps: 5.0         # 5 bps per side
   train_window_days: 504    # ~2y rolling train
-  test_window_days: 63      # ~1 quarter OOS per fold
+  test_window_days: 90      # ~1 quarter OOS per fold (fewer, steadier retrains)
   purge_days: 20            # >= max holding to kill label overlap leakage
   embargo_days: 5
 

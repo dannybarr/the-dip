@@ -112,6 +112,7 @@ class MastermindEngine:
                 sl_atr=self.cfg.get("labeling.stop_loss_atr", 1.0),
                 vertical_days=self.cfg.get("labeling.vertical_days", 15),
                 min_hold_days=self.cfg.get("horizon.min_hold_days", 1),
+                max_barrier_pct=self.cfg.get("labeling.max_barrier_pct"),
             )
             cutoff = as_of or f.index[-1]
             resolved = lab.label.copy()

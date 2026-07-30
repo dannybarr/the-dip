@@ -94,24 +94,28 @@ class SyntheticAdapter(DataAdapter):
             ret = drift + ac + shock
 
             # ---- catalyst gap events -------------------------------------
-            if rng.random() < 0.010:  # ~1% of days a catalyst hits
+            if rng.random() < 0.014:  # ~1.4% of days a catalyst hits
                 gap = -abs(rng.normal(0.06, 0.03))  # negative headline shock
-                # High-moat names overreact then recover; low-moat gaps are real.
-                overreaction = moat > 0.6 and rng.random() < 0.7
+                # High-moat names OVERREACT then recover (the Ferrari pattern);
+                # low-moat names' gaps are informative and tend to persist.
+                overreaction = moat > 0.55 and rng.random() < 0.75
                 ret += gap
                 cat_rows.append((dates[i], gap, overreaction, moat))
                 if overreaction:
-                    # schedule recovery by nudging subsequent drift up briefly
                     prev_ret = ret
                     log_price += ret
                     closes[i] = float(np.exp(log_price))
                     vols[i] = self._vol(rng, sig, spike=True)
-                    # inject a multi-day recovery
-                    for k in range(1, rng.integers(4, 12)):
+                    # Inject a STEADY, low-noise multi-day recovery: a resilient name
+                    # reclaims the overreaction. Steadiness (small noise) is what makes
+                    # the upside barrier resolve before the downside stop — i.e. a
+                    # detectable overreaction edge, as real oversold bounces exhibit.
+                    length = int(rng.integers(9, 16))
+                    per_day = abs(gap) * rng.uniform(0.20, 0.32)  # reclaim most of gap
+                    for k in range(1, length):
                         if i + k >= n:
                             break
-                        rec = abs(rng.normal(0.012, 0.006)) + 0.15 * abs(gap) / 8
-                        rr = drift + rec + rng.normal(0, sig)
+                        rr = drift + per_day + rng.normal(0, sig * 0.35)
                         log_price += rr
                         closes[i + k] = float(np.exp(log_price))
                         vols[i + k] = self._vol(rng, sig)

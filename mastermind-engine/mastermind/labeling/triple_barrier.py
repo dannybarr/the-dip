@@ -33,6 +33,7 @@ def triple_barrier_labels(
     sl_atr: float,
     vertical_days: int,
     min_hold_days: int = 1,
+    max_barrier_pct: float | None = None,
 ) -> TripleBarrierResult:
     close = df["close"].values
     high = df["high"].values
@@ -49,8 +50,13 @@ def triple_barrier_labels(
         if not np.isfinite(a[i]) or a[i] <= 0 or i + 1 >= n:
             continue
         entry = close[i]                      # decision at close of bar i
-        pt = entry + pt_atr * a[i]
-        sl = entry - sl_atr * a[i]
+        pt_dist = pt_atr * a[i]
+        sl_dist = sl_atr * a[i]
+        if max_barrier_pct is not None:       # cap barrier width (risk geometry)
+            pt_dist = min(pt_dist, max_barrier_pct * entry)
+            sl_dist = min(sl_dist, max_barrier_pct * entry)
+        pt = entry + pt_dist
+        sl = entry - sl_dist
         end = min(i + vertical_days, n - 1)
         resolved = False
         for j in range(i + 1, end + 1):

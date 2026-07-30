@@ -70,6 +70,7 @@ def generate_signals(
     """Build signals for the rows in `feats`. If as_of is given, only that date."""
     pt = cfg.get("labeling.profit_take_atr", 2.0)
     sl = cfg.get("labeling.stop_loss_atr", 1.0)
+    max_bp = cfg.get("labeling.max_barrier_pct")
     min_conv = cfg.get("strategy.min_conviction", 0.15)
 
     signals: List[Signal] = []
@@ -90,9 +91,14 @@ def generate_signals(
         report = passes_principles(row, edge, cfg)
         reasons = _thesis_reasons(row)
 
+        pt_dist, sl_dist = pt * atr, sl * atr
+        if max_bp is not None:                 # keep geometry consistent with labels
+            pt_dist = min(pt_dist, max_bp * close)
+            sl_dist = min(sl_dist, max_bp * close)
+
         sig = Signal(
             ticker=ticker, date=dt, edge=edge, conviction=conv,
-            entry=close, atr=atr, stop=close - sl * atr, target=close + pt * atr,
+            entry=close, atr=atr, stop=close - sl_dist, target=close + pt_dist,
             reasons=reasons,
             features={k: float(row.get(k)) for k in
                       ["quality", "value_discount", "narrative_gap", "rsi", "adx",
