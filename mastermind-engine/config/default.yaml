@@ -42,13 +42,18 @@ model:              # §5
     l2_regularization: 1.0
     min_samples_leaf: 20    # small enough to isolate the (rare) catalyst-edge rows
 
-strategy:           # §5 conviction, §7 principle gates
-  # Barriers are 2:1 (pt 2*ATR / sl 1*ATR) so BREAKEVEN win-prob ~= 0.33. Floors are
-  # set above breakeven with margin so we only act on a genuine, sized edge.
-  min_conviction: 0.08      # skip marginal setups (JPM discipline) — be selective
-  min_edge: 0.52            # calibrated P(win) floor: take only high-confidence edges
+strategy:           # §5 conviction + meta-labeling, §7 principle gates
+  # META-LABELING: the primary entry trigger is an explicit dislocation (catalyst OR
+  # deep-value+quality); the ML model is the confidence FILTER on top (min_edge),
+  # not the signal discoverer. So min_edge is a light floor near breakeven (~0.43),
+  # NOT a high bar — the rule already ensures we're in edge-bearing territory.
+  min_conviction: 0.0       # ranking/sizing only; the primary trigger does selection
+  min_edge: 0.40            # model filter: veto only setups the model actively dislikes
   quality_gate: true        # buy discounted QUALITY, not cheap garbage
   require_catalyst_or_value: true
+  catalyst_threshold: 0.4   # narrative_gap / recent_shock level that counts as a catalyst
+  value_threshold: 0.70     # deep-value discount (vs own history) required for value entries
+  quality_threshold: 0.60   # quality floor paired with deep value (anti value-trap)
 
 risk:               # §7 survival first — "balanced conviction"
   risk_per_trade: 0.010     # 1.0% equity at risk to the stop

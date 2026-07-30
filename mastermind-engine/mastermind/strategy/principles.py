@@ -43,15 +43,24 @@ def passes_principles(row: pd.Series, edge: float, cfg) -> PrincipleReport:
         if not np.isnan(quality) and quality < 0.30 and catalyst < 0.5:
             reasons.append(f"low quality {quality:.2f} without catalyst (value-trap risk)")
 
-    # Gate 2 — A real REASON: either a value discount (Pillar 2) OR a strategic
-    # catalyst (Pillar 3). Pure technical momentum alone is not enough conviction.
+    # Gate 2 — PRIMARY TRIGGER (meta-labeling, RESEARCH.md §5). We only ACT on a
+    # genuine dislocation; the ML model is the confidence FILTER on top, not the
+    # signal discoverer. A candidate must be either (a) a strategic catalyst — a
+    # resilient name over-punished on a shock (Pillar 3) — or (b) DEEP value AND
+    # quality (Pillar 2, a discounted compounder, not a cheap value trap). Pure
+    # technical momentum or shallow "cheapness" alone is not a reason to trade.
     if cfg.get("strategy.require_catalyst_or_value", True):
-        has_value = (not np.isnan(value_discount)) and value_discount >= 0.55
-        has_catalyst = catalyst > 0.3 or _safe(row.get("recent_shock")) > 0
+        cat_thr = cfg.get("strategy.catalyst_threshold", 0.4)
+        v_thr = cfg.get("strategy.value_threshold", 0.70)
+        q_thr = cfg.get("strategy.quality_threshold", 0.60)
+        has_catalyst = catalyst >= cat_thr or _safe(row.get("recent_shock")) >= cat_thr
+        deep_value = (not np.isnan(value_discount)) and value_discount >= v_thr
+        good_quality = np.isnan(quality) or quality >= q_thr
+        has_value = deep_value and good_quality
         notes["has_value"] = float(has_value)
         notes["has_catalyst"] = float(has_catalyst)
         if not (has_value or has_catalyst):
-            reasons.append("no value discount and no catalyst (thesis-free)")
+            reasons.append("no strategic catalyst and no deep-value+quality (thesis-free)")
 
     # Gate 3 — Don't catch a falling knife: reject if in a violent, accelerating
     # downtrend UNLESS a genuine oversold mean-reversion setup is present.
