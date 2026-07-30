@@ -48,8 +48,12 @@ class FeaturePipeline:
 
         feats = pd.concat([tech, val, cat], axis=1)
         feats = feats.loc[:, ~feats.columns.duplicated()]
-        # ATR in price terms is needed downstream for labeling/risk; expose it.
-        feats["atr"] = tech["atr_pct"] * df["close"]
+        # ATR in price terms drives barrier width for labeling/risk. Use a SMOOTHED
+        # ATR (rolling median) so a single shock-day volatility spike doesn't blow the
+        # barriers out to ~10% — that both wrecks risk geometry and noise-whipsaws the
+        # multi-day recovery trade. The raw atr_pct stays a model feature.
+        atr_price = tech["atr_pct"] * df["close"]
+        feats["atr"] = atr_price.rolling(10, min_periods=3).median()
         feats = feats.replace([np.inf, -np.inf], np.nan)
         return feats
 

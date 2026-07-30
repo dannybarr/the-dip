@@ -18,7 +18,7 @@ labeling:           # §4 triple-barrier (ATR-scaled). Breakeven win-prob = sl/(
   vertical_days: 20     # give the swing thesis time to resolve
   # Cap barrier width as a % of entry. Post-shock ATR spikes would otherwise create
   # ~10% stops (bad risk geometry that also drowns the recovery signal in noise).
-  max_barrier_pct: 0.06
+  max_barrier_pct: 0.08
 
 features:           # §3 lookbacks in days/weeks
   momentum_windows: [5, 10, 20, 50]
@@ -45,8 +45,8 @@ model:              # §5
 strategy:           # §5 conviction, §7 principle gates
   # Barriers are 2:1 (pt 2*ATR / sl 1*ATR) so BREAKEVEN win-prob ~= 0.33. Floors are
   # set above breakeven with margin so we only act on a genuine, sized edge.
-  min_conviction: 0.04      # skip marginal setups (JPM discipline)
-  min_edge: 0.45            # calibrated P(win) floor (breakeven 0.43 + margin)
+  min_conviction: 0.08      # skip marginal setups (JPM discipline) — be selective
+  min_edge: 0.52            # calibrated P(win) floor: take only high-confidence edges
   quality_gate: true        # buy discounted QUALITY, not cheap garbage
   require_catalyst_or_value: true
 
