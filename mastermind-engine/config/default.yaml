@@ -1,0 +1,71 @@
+# Mastermind Engine — default configuration (profile: BALANCED CONVICTION)
+# Every value here traces to a principle in RESEARCH.md.
+
+profile: balanced_conviction
+
+universe:
+  # Watchlist for signal generation. Real deployments expand this from a screener.
+  # These defaults include the RESEARCH.md exemplar (RACE / Ferrari) plus liquid names.
+  tickers: [AAPL, MSFT, NVDA, RACE, JPM, GOOGL, AMZN, META, LLY, COST, V, XOM]
+
+horizon:            # §2 swing sweet spot: 3d–4wk
+  min_hold_days: 3
+  max_hold_days: 20     # vertical barrier
+
+labeling:           # §4 triple-barrier (ATR-scaled)
+  profit_take_atr: 2.0
+  stop_loss_atr: 1.0
+  vertical_days: 15
+
+features:           # §3 lookbacks in days/weeks
+  momentum_windows: [5, 10, 20, 50]
+  rsi_period: 14
+  atr_period: 14
+  bb_period: 20
+  vol_window: 20
+  value_lookback: 252   # ~1y for relative-value percentiles
+
+model:              # §5
+  type: hist_gbm        # hist_gbm | lightgbm (if installed)
+  calibrate: true
+  calibration_method: sigmoid   # sigmoid (fast Platt) | isotonic (flexible, slower)
+  calibration_cv: 2
+  meta_label: true
+  min_train_samples: 250
+  params:
+    max_depth: 4
+    learning_rate: 0.05
+    max_iter: 300
+    l2_regularization: 1.0
+    min_samples_leaf: 40
+
+strategy:           # §5 conviction, §7 principle gates
+  # Barriers are 2:1 (pt 2*ATR / sl 1*ATR) so BREAKEVEN win-prob ~= 0.33. Floors are
+  # set above breakeven with margin so we only act on a genuine, sized edge.
+  min_conviction: 0.05      # skip marginal setups (JPM discipline)
+  min_edge: 0.42            # calibrated P(win) floor (breakeven 0.33 + margin)
+  quality_gate: true        # buy discounted QUALITY, not cheap garbage
+  require_catalyst_or_value: true
+
+risk:               # §7 survival first — "balanced conviction"
+  risk_per_trade: 0.010     # 1.0% equity at risk to the stop
+  kelly_fraction: 0.5       # half-Kelly cap
+  max_positions: 8
+  max_weight_per_name: 0.20
+  max_gross_exposure: 1.0
+  max_sector_positions: 3
+  vol_target_annual: 0.15   # throttle exposure toward this
+
+backtest:           # §6 honesty
+  initial_equity: 100000
+  commission_bps: 2.0       # 2 bps per side
+  slippage_bps: 5.0         # 5 bps per side
+  train_window_days: 504    # ~2y rolling train
+  test_window_days: 63      # ~1 quarter OOS per fold
+  purge_days: 20            # >= max holding to kill label overlap leakage
+  embargo_days: 5
+
+review:             # §8 self-critique thresholds
+  min_trades_for_change: 30
+  overfit_sharpe_ratio: 0.6    # OOS/IS Sharpe below this => overfit flag
+  alpha_decay_windows: 3

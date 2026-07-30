@@ -1,0 +1,10 @@
+# Mastermind Engine — core dependencies
+numpy>=1.26
+pandas>=2.1
+scikit-learn>=1.4
+scipy>=1.11
+pyyaml>=6.0
+
+# Optional (drop-in upgrades; the engine runs without them):
+#   lightgbm>=4.0      # faster/stronger GBM than the sklearn default
+#   requests>=2.31     # live data adapters (FMP / Yahoo) at deploy time
