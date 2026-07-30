@@ -19,7 +19,13 @@ positive, out-of-sample edge:
 | 3 | + barrier-width cap (shock ATR no longer → 10% stops) | expectancy **−0.18%**, PF 0.94 | NO_EDGE |
 | 4 | + smoothed-ATR barriers, higher model selectivity | expectancy **−1.29%** (model's top picks were *worse*) | NO_EDGE |
 | 5 | **Meta-labeling: catalyst-primary, model-filter** | expectancy **+0.32%**, PF 1.09, Sharpe +0.23 | positive |
-| 6 | + tighter catalyst threshold | _(see run output)_ | positive |
+| 6 | + tighter catalyst threshold (current default) | 619 trades, 52.3% win, expectancy **+0.32%**, PF **1.09**, Sharpe **+0.21**, maxDD −7.7% | positive (DECAYING) |
+
+> Reference point for how much upside remains in *concentration*: the clean rule-only
+> catalyst entry (no re-entry inflation) is **+1.90% per trade on 97 trades**. The
+> backtest takes ~6× more trades because the catalyst stays flagged for ~10 days and
+> it re-enters — a de-duplication / cooldown is the obvious next lever to lift Sharpe
+> toward the rule's standalone edge.
 
 The decisive diagnostic: a **rule-only** catalyst entry (no ML) already yields
 **61.9% win / +1.90% per trade after costs**, while value-alone is break-even and

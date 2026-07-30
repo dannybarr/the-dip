@@ -20,7 +20,9 @@ without overfitting.
 > overstate live results. See `RESEARCH.md` §10.
 
 The full "why" behind every module is in **[`RESEARCH.md`](./RESEARCH.md)** — read it
-first. This README is the "how to run it."
+first. The honest, reproducible validation record (how meta-labeling turned a
+break-even strategy into a positive purged walk-forward edge) is in
+**[`RESULTS.md`](./RESULTS.md)**. This README is the "how to run it."
 
 ---
 
