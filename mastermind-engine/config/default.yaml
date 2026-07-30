@@ -51,8 +51,8 @@ strategy:           # §5 conviction + meta-labeling, §7 principle gates
   min_edge: 0.40            # model filter: veto only setups the model actively dislikes
   quality_gate: true        # buy discounted QUALITY, not cheap garbage
   require_catalyst_or_value: true
-  catalyst_threshold: 0.4   # narrative_gap / recent_shock level that counts as a catalyst
-  value_threshold: 0.70     # deep-value discount (vs own history) required for value entries
+  catalyst_threshold: 0.6   # narrative_gap / recent_shock level that counts as a catalyst
+  value_threshold: 0.75     # deep-value discount (vs own history) required for value entries
   quality_threshold: 0.60   # quality floor paired with deep value (anti value-trap)
 
 risk:               # §7 survival first — "balanced conviction"
