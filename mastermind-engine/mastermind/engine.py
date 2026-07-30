@@ -7,7 +7,7 @@ Two entry points mirror the two clocks in RESEARCH.md §9:
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 import numpy as np
@@ -22,6 +22,7 @@ from .risk import RiskManager
 from .strategy.signals import generate_signals, Signal
 from .backtest import WalkForwardBacktester, BacktestResult
 from .review import SelfReview, ReviewReport
+from .universe import NicheSelector
 
 
 @dataclass
@@ -30,6 +31,7 @@ class ScanResult:
     signals: List[Signal]                # accepted, ranked by conviction
     rejected: List[Signal]               # gated out, with reasons (transparency)
     sized: List[dict]                    # risk-manager output for accepted signals
+    niche: List[dict] = field(default_factory=list)   # the specialised universe, ranked
 
 
 class MastermindEngine:
@@ -38,7 +40,29 @@ class MastermindEngine:
         self.adapter = adapter
         self.pipe = FeaturePipeline(self.cfg)
         self.risk = RiskManager(self.cfg)
+        self.niche = NicheSelector(self.cfg)
         self._model: Optional[EdgeModel] = None
+        self._last_niche = []
+
+    def select_niche(self, universe: Optional[Dict[str, pd.DataFrame]] = None,
+                     as_of: Optional[pd.Timestamp] = None):
+        """Return the ranked niche (most exploitable names) for a given date."""
+        universe = universe or self._get_universe()
+        feats, labels = {}, {}
+        for t, df in universe.items():
+            fund = self.adapter.fundamentals(t) if self.adapter else None
+            cat = self.adapter.catalysts(t) if self.adapter else None
+            f = self.pipe.build(df, fund, cat)
+            feats[t] = f
+            labels[t] = triple_barrier_labels(
+                df, f["atr"],
+                pt_atr=self.cfg.get("labeling.profit_take_atr", 2.0),
+                sl_atr=self.cfg.get("labeling.stop_loss_atr", 1.0),
+                vertical_days=self.cfg.get("labeling.vertical_days", 15),
+                min_hold_days=self.cfg.get("horizon.min_hold_days", 1),
+                max_barrier_pct=self.cfg.get("labeling.max_barrier_pct"),
+            )
+        return self.niche.select(feats, labels, as_of=as_of)
 
     # ---- data -------------------------------------------------------------
     def _get_universe(self) -> Dict[str, pd.DataFrame]:
@@ -99,7 +123,7 @@ class MastermindEngine:
 
         # Build features/labels across all names and fit one model on ALL history
         # up to `as_of` (point-in-time; nothing after as_of is used).
-        feats, X_parts, y_parts, w_parts = {}, [], [], []
+        feats, labels_map, X_parts, y_parts, w_parts = {}, {}, [], [], []
         latest_common = None
         for t, df in universe.items():
             fund = self.adapter.fundamentals(t) if self.adapter else None
@@ -114,6 +138,7 @@ class MastermindEngine:
                 min_hold_days=self.cfg.get("horizon.min_hold_days", 1),
                 max_barrier_pct=self.cfg.get("labeling.max_barrier_pct"),
             )
+            labels_map[t] = lab
             cutoff = as_of or f.index[-1]
             resolved = lab.label.copy()
             # Only train on labels fully resolved by the cutoff (no peeking).
@@ -139,9 +164,18 @@ class MastermindEngine:
         w = pd.concat(w_parts, axis=0).reset_index(drop=True)
         self._model = EdgeModel(self.cfg).fit(X, y, sample_weight=w)
 
+        # Focus on the evolving niche (the most exploitable names for this strategy).
+        niche = None
+        if self.cfg.get("universe.auto_select_niche", True):
+            picks = self.niche.select(feats, labels_map, as_of=as_of)
+            niche = {p.ticker for p in picks}
+            self._last_niche = picks
+
         # Score each name at its latest available bar <= as_of.
         candidates, accepted_signals, rejected_signals = [], [], []
         for t, f in feats.items():
+            if niche is not None and t not in niche:
+                continue
             cutoff = as_of or f.index[-1]
             valid = f.index[f.index <= cutoff]
             if len(valid) == 0:
@@ -174,4 +208,5 @@ class MastermindEngine:
             signals=accepted_signals,
             rejected=rejected_signals,
             sized=sorted(sized, key=lambda c: c["conviction"], reverse=True),
+            niche=[p.as_dict() for p in self._last_niche],
         )

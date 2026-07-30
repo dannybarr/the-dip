@@ -25,6 +25,7 @@ from ..labeling import triple_barrier_labels
 from ..models import EdgeModel
 from ..risk import RiskManager
 from ..strategy.signals import generate_signals
+from ..universe import NicheSelector
 from .metrics import performance_metrics, PerformanceReport
 
 
@@ -57,6 +58,7 @@ class WalkForwardBacktester:
         self.cfg = cfg
         self.pipe = FeaturePipeline(cfg)
         self.risk = RiskManager(cfg)
+        self.niche = NicheSelector(cfg)
 
     # ---- data prep --------------------------------------------------------
     def _prepare(self, universe: Dict[str, pd.DataFrame], adapter=None):
@@ -151,6 +153,11 @@ class WalkForwardBacktester:
         edge_cache: Dict[str, pd.Series] = {}
         fold_end = fold_start  # will be set on first (re)train
 
+        auto_niche = self.cfg.get("universe.auto_select_niche", True)
+        cooldown = pd.Timedelta(days=self.cfg.get("strategy.cooldown_days", 0))
+        last_trade_date: Dict[str, pd.Timestamp] = {}
+        active_niche: Optional[set] = None
+
         for i, today in enumerate(all_dates):
             if today < start:
                 # accrue equity curve during warmup (flat)
@@ -167,8 +174,20 @@ class WalkForwardBacktester:
                 if X is not None and len(X) >= min_train:
                     model = EdgeModel(self.cfg).fit(X, y, sample_weight=w)
                     edge_cache = self._score_fold(model, feats, today, fold_end)
-                    fold_metrics.append({"date": str(today.date()),
-                                         "train_n": int(len(X))})
+                    # Re-select the EVOLVING niche using only data up to `today`.
+                    niche_rows = []
+                    if auto_niche:
+                        picks = self.niche.select(feats, labels, as_of=today)
+                        active_niche = {p.ticker for p in picks}
+                        niche_rows = [p.as_dict() for p in picks]
+                    # Track which factors the model is leaning on (learning over time).
+                    imp = model.permutation_importance(X, y)
+                    top_factors = list(imp.head(5).index) if imp is not None else []
+                    fold_metrics.append({
+                        "date": str(today.date()), "train_n": int(len(X)),
+                        "niche": sorted(active_niche) if active_niche else None,
+                        "niche_detail": niche_rows, "top_factors": top_factors,
+                    })
                 else:
                     model = model  # keep previous model if we can't retrain yet
 
@@ -192,10 +211,23 @@ class WalkForwardBacktester:
                         reason=reason, conviction=pos["conviction"], edge=pos["edge"],
                     ))
                     del open_pos[t]
+                    last_trade_date[t] = today   # start the cooldown clock
 
             # 2) look for NEW entries if we have slots and a live model.
-            if model is not None and len(open_pos) < self.cfg.get("risk.max_positions", 8):
+            if model is not None and len(open_pos) < self.cfg.get("risk.max_positions", 6):
                 candidates = self._candidates(today, feats, edge_cache, universe, open_pos)
+                # Concentrate on the evolving niche, and honour per-name cooldown so we
+                # take ONE clean shot per catalyst instead of re-entering while flagged.
+                filtered = []
+                for c in candidates:
+                    t = c["ticker"]
+                    if active_niche is not None and t not in active_niche:
+                        continue
+                    lt = last_trade_date.get(t)
+                    if lt is not None and (today - lt) < cooldown:
+                        continue
+                    filtered.append(c)
+                candidates = filtered
                 equity_now = cash + self._open_value(open_pos, universe, today)
                 accepted = self.risk.select_portfolio(
                     candidates, equity_now, open_sectors=None, n_open=len(open_pos))

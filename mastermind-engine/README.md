@@ -38,9 +38,13 @@ features/     The 3 pillars as computable, no-lookahead signals:
 labeling/     triple_barrier.py — labels = which of {profit, stop, timeout} hits first
 models/       gbm.py — calibrated gradient-boosted P(win), meta-labeled
 strategy/     principles.py  the non-negotiable JPM gates (margin of safety, quality,
-                             thesis, no falling knives)
+                             thesis, no falling knives) + META-LABELING (catalyst is
+                             the primary trigger; the model is the confidence filter)
               signals.py     conviction score -> ranked signals
-risk/         manager.py — fixed-fractional + fractional-Kelly sizing, portfolio caps
+universe/     selector.py — adaptive NICHE selection: score each name's exploitability
+                            and concentrate on the best K, re-selected/EVOLVING per fold
+risk/         manager.py — fixed-fractional + fractional-Kelly sizing, conviction tilt,
+                            per-name cooldown, portfolio caps (concentration)
 backtest/     engine.py  walk-forward, purged, embargoed, realistic costs
               metrics.py Sharpe/Sortino/DD/PF/expectancy
 review/       self_review.py — unbiased self-critique + evidence-gated optimisation

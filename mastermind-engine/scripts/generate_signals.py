@@ -35,6 +35,13 @@ def main():
           f"{cfg.get('profile')})")
     print("=" * 78)
 
+    if scan.niche:
+        print("\nSPECIALISED NICHE (most exploitable names for this strategy, ranked):")
+        for p in scan.niche:
+            print(f"   {p['ticker']:6s} score={p['score']:.3f}  "
+                  f"recovery_win={p['recovery_winrate']:.0%}  "
+                  f"events={p['n_events']}  quality={p['quality']:.2f}")
+
     if not scan.signals:
         print("\nNo signals clear the conviction + principle gates today. "
               "Cash is a position.")

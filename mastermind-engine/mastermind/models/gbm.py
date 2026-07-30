@@ -128,3 +128,36 @@ class EdgeModel:
         except Exception:
             return None
         return None
+
+    def permutation_importance(self, X: pd.DataFrame, y_label: pd.Series,
+                               n_sample: int = 600) -> Optional[pd.Series]:
+        """Model-agnostic importance: drop in AUC when each feature is shuffled.
+
+        Works for HistGradientBoosting (which has no native `feature_importances_`)
+        and for the calibrated wrapper. Cheap: one scoring pass per feature on a
+        capped subsample, so it can run every fold to evidence what the model is
+        actually learning (and how that mix drifts over time).
+        """
+        if not self._fitted or self._pipe is None or len(X) == 0:
+            return None
+        try:
+            from sklearn.metrics import roc_auc_score
+            rng = np.random.default_rng(0)
+            y = (y_label.values == 1).astype(int)
+            if y.sum() < 5 or (len(y) - y.sum()) < 5:
+                return None
+            if len(X) > n_sample:
+                idx = rng.choice(len(X), n_sample, replace=False)
+                Xs, ys = X.iloc[idx].copy(), y[idx]
+            else:
+                Xs, ys = X.copy(), y
+            base = roc_auc_score(ys, self.predict_proba(Xs))
+            drops = {}
+            for col in self.features:
+                saved = Xs[col].values.copy()
+                Xs[col] = rng.permutation(saved)
+                drops[col] = base - roc_auc_score(ys, self.predict_proba(Xs))
+                Xs[col] = saved
+            return pd.Series(drops).sort_values(ascending=False)
+        except Exception:
+            return None

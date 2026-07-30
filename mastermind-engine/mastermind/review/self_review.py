@@ -138,11 +138,46 @@ class SelfReview:
                     "out. Prioritise the self-review's fast-clock refit cadence.")
                 hypotheses.append("Shorten backtest.train_window_days to adapt faster.")
 
+        # (f) EVOLUTION: is the niche and the factor mix actually adapting over time?
+        evo = self._evolution(result)
+        if evo:
+            attribution["evolution"] = evo
+            if evo.get("niche_turnover", 0) > 0:
+                findings.append(
+                    f"Niche is adapting: {evo['niche_turnover']} name-changes across "
+                    f"{evo['n_folds']} folds (the universe evolves, as intended).")
+            if evo.get("factor_drift"):
+                findings.append(
+                    f"Model is re-learning: top factor shifted "
+                    f"{evo['factor_drift']} over the backtest.")
+
         # --- 3. Verdict ------------------------------------------------------
         verdict = self._verdict(m, n, min_trades, decay)
         attribution["headline"] = m.summary()
 
         return ReviewReport(verdict, findings, deltas, hypotheses, attribution)
+
+    def _evolution(self, result: BacktestResult) -> dict:
+        """Summarise how the niche and factor mix changed across folds (learning)."""
+        fm = [f for f in (result.fold_metrics or []) if f.get("niche")]
+        if len(fm) < 2:
+            return {}
+        turnover = 0
+        for a, b in zip(fm[:-1], fm[1:]):
+            turnover += len(set(a["niche"]) ^ set(b["niche"]))
+        first_factor = (fm[0].get("top_factors") or [None])[0]
+        last_factor = (fm[-1].get("top_factors") or [None])[0]
+        drift = None
+        if first_factor and last_factor and first_factor != last_factor:
+            drift = f"{first_factor} -> {last_factor}"
+        return {
+            "n_folds": len(fm),
+            "niche_turnover": turnover,
+            "first_niche": fm[0]["niche"],
+            "last_niche": fm[-1]["niche"],
+            "factor_drift": drift,
+            "last_top_factors": fm[-1].get("top_factors"),
+        }
 
     def _alpha_decay(self, result: BacktestResult):
         tf = result.trade_frame

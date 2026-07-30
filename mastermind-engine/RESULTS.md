@@ -22,10 +22,36 @@ positive, out-of-sample edge:
 | 6 | + tighter catalyst threshold (current default) | 619 trades, 52.3% win, expectancy **+0.32%**, PF **1.09**, Sharpe **+0.21**, maxDD −7.7% | positive (DECAYING) |
 
 > Reference point for how much upside remains in *concentration*: the clean rule-only
-> catalyst entry (no re-entry inflation) is **+1.90% per trade on 97 trades**. The
-> backtest takes ~6× more trades because the catalyst stays flagged for ~10 days and
-> it re-enters — a de-duplication / cooldown is the obvious next lever to lift Sharpe
-> toward the rule's standalone edge.
+> catalyst entry (no re-entry inflation) is **+1.90% per trade on 97 trades**.
+
+## Stage 7 — Concentration, niche specialisation & evolution
+
+Implemented (a) a per-name **cooldown** so the engine takes one clean shot per
+catalyst instead of re-entering while the signal stays flagged; (b) an **adaptive
+niche selector** that re-scores every name's exploitability each fold and concentrates
+the book on the top-K, re-selected over time so the universe **evolves**; and (c)
+**conviction-tilted, more aggressive sizing** (fewer, bigger bets). Result vs the
+Stage-6 baseline (same purged walk-forward, same costs, 12 names, ~5.5y):
+
+| Metric | Stage 6 (baseline) | **Stage 7 (concentrated + niche)** | Δ |
+|---|---|---|---|
+| Trades | 619 | **94** | 6.6× fewer |
+| Win rate | 52.3% | **56.4%** | +4.1 pts |
+| Profit factor | 1.09 | **1.34** | +23% |
+| **Expectancy / trade** | +0.32% | **+1.13%** | **3.5×** |
+| Sharpe | 0.21 | **0.27** | +29% |
+| Max drawdown | −7.7% | **−6.2%** | shallower |
+| Verdict | DECAYING | **MARGINAL** | decay removed |
+
+Per-trade expectancy (+1.13%) now approaches the **+1.90%** clean-signal ceiling — the
+remaining gap is the model filter + next-open execution, not re-entry dilution.
+
+**The niche evolves and is economically sensible.** Across folds it consistently holds
+the high-quality overreaction names (AAPL, MSFT, LLY, and — fittingly — **RACE /
+Ferrari, the RESEARCH.md exemplar, in the niche every single fold**) while rotating the
+marginal slots (GOOGL → META → XOM → AMZN) as their behaviour changes. The self-review
+reports this niche turnover and the per-fold permutation-importance factor mix as direct
+evidence the engine is *learning and adapting over time*, not static.
 
 The decisive diagnostic: a **rule-only** catalyst entry (no ML) already yields
 **61.9% win / +1.90% per trade after costs**, while value-alone is break-even and

@@ -57,6 +57,16 @@ def main():
     print(f"folds trained: {len(result.fold_metrics)}")
     print("\n" + report.to_markdown())
 
+    # Show the EVOLVING niche + factor mix across the backtest (learning over time).
+    folds = [f for f in result.fold_metrics if f.get("niche")]
+    if folds:
+        print("\n=== NICHE / FACTOR EVOLUTION ===")
+        picks = folds if len(folds) <= 4 else [folds[0], folds[len(folds) // 2], folds[-1]]
+        for f in picks:
+            print(f"  {f['date']}: niche={f['niche']}")
+            if f.get("top_factors"):
+                print(f"            top factors: {f['top_factors']}")
+
     if result.trade_frame is not None and len(result.trade_frame) > 0:
         tf = result.trade_frame
         print(f"\nsample trades (of {len(tf)}):")

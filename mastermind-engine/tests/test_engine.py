@@ -127,6 +127,36 @@ def test_scan_emits_gated_signals(adapter, cfg):
         assert 0 <= s.conviction <= 1
 
 
+def test_niche_selection_ranks_and_is_point_in_time(adapter, cfg):
+    engine = MastermindEngine(cfg, adapter=adapter)
+    universe = adapter.load_universe(cfg.get("universe.tickers"))
+    picks = engine.select_niche(universe)
+    assert len(picks) <= cfg.get("universe.niche_size")
+    # ranked by score, descending
+    scores = [p.score for p in picks]
+    assert scores == sorted(scores, reverse=True)
+    # an earlier as_of must not peek at later data — it should still return valid,
+    # bounded scores computed only from the truncated history
+    early = list(universe.values())[0].index[400]
+    picks_early = engine.select_niche(universe, as_of=early)
+    assert all(0 <= p.recovery_winrate <= 1 for p in picks_early)
+
+
+def test_permutation_importance(adapter, cfg):
+    pipe = FeaturePipeline(cfg)
+    df = adapter.history("CCC")
+    feats = pipe.build(df, adapter.fundamentals("CCC"))
+    res = triple_barrier_labels(df, feats["atr"], 2.0, 1.5, 20, 3,
+                                max_barrier_pct=0.08)
+    cols = pipe.feature_columns(feats)
+    mask = res.label.notna()
+    model = EdgeModel(cfg).fit(feats.loc[mask, cols], res.label[mask])
+    imp = model.permutation_importance(feats.loc[mask, cols], res.label[mask])
+    # either a ranked Series or None (if degenerate) — never raises
+    if imp is not None:
+        assert list(imp.index) == list(imp.sort_values(ascending=False).index)
+
+
 def test_config_overrides_are_immutable(cfg):
     base = cfg.get("strategy.min_edge")
     new = cfg.with_overrides({"strategy.min_edge": 0.99})

@@ -92,10 +92,17 @@ class RiskManager:
         `candidates`: list of dicts with keys ticker, conviction, edge, entry, stop,
         target, vol_regime, sector. Returns the accepted subset with `shares` set.
         """
-        max_positions = self.cfg.get("risk.max_positions", 8)
+        max_positions = self.cfg.get("risk.max_positions", 6)
         max_sector = self.cfg.get("risk.max_sector_positions", 3)
         max_gross = self.cfg.get("risk.max_gross_exposure", 1.0)
+        max_w = self.cfg.get("risk.max_weight_per_name", 0.25)
+        tilt = self.cfg.get("risk.conviction_tilt", 0.0) if self.cfg.get(
+            "strategy.concentrate", True) else 0.0
         sectors = dict(open_sectors or {})
+
+        # Normalise conviction across the candidate set for the concentration tilt.
+        convs = [c.get("conviction", 0.0) for c in candidates]
+        cmax = max(convs) if convs else 0.0
 
         accepted: List[dict] = []
         gross = 0.0
@@ -113,6 +120,12 @@ class RiskManager:
             )
             if pos is None or pos.shares <= 0:
                 continue
+            # Concentration tilt: scale size up toward the highest-conviction names,
+            # then re-clip to the per-name weight cap so survival limits still bind.
+            if tilt > 0 and cmax > 0:
+                norm = c.get("conviction", 0.0) / cmax
+                pos.shares *= (1.0 + tilt * norm)
+                pos.shares = min(pos.shares, (equity * max_w) / c["entry"])
             notional = pos.shares * c["entry"]
             if (gross + notional) / equity > max_gross:
                 # scale down to fit remaining gross budget

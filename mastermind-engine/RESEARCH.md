@@ -266,6 +266,28 @@ same pattern The Dip already uses for FMP.
 
 ---
 
+## 10b. Niche specialisation & concentration (differentiate for maximal upside)
+
+A world-class book does not trade every name the same way — it **specialises where its
+edge actually lives** and **concentrates capital** into its best ideas. Two mechanisms:
+
+- **Adaptive niche selection.** Every fold, the engine scores each name's
+  *exploitability for this strategy* — do its shocks reliably bounce (catalyst
+  recovery win-rate), does it give enough shots (event frequency), how big is the net
+  bounce, is it a resilient/quality name, and is its volatility governable — using only
+  point-in-time data. It keeps the top-K "niche" and **re-selects over time, so the
+  niche EVOLVES**: a name that stops behaving this way drops out; a newly-resilient one
+  enters. The selection is driven purely by realised behaviour, not our priors about a
+  ticker — the unbiased specialisation the mandate asks for. → `universe/selector.py`
+- **Concentration.** A per-name **cooldown** enforces one clean shot per catalyst
+  (no re-entry dilution while a signal stays flagged), and **conviction-tilted sizing**
+  puts more capital behind the highest-conviction names — fewer, bigger, better bets.
+  On the synthetic harness this lifted per-trade expectancy 3.5× (see RESULTS.md §7).
+
+This is the differentiator: the crowd trades a broad watchlist uniformly; the engine
+concentrates on the specific names and specific dislocations where the overreaction
+edge is strongest, and rotates that focus as the market changes.
+
 ## 11. From research to code — the module map
 
 | Principle (this doc) | Module |
@@ -279,6 +301,7 @@ same pattern The Dip already uses for FMP.
 | §6 walk-forward + costs | `mastermind/backtest/` |
 | §7 sizing & survival | `mastermind/risk/manager.py` |
 | §8 self-review & optimisation | `mastermind/review/self_review.py` |
+| §10b niche selection & evolution | `mastermind/universe/selector.py` |
 | §9 data/news adapters | `mastermind/data/` |
 | orchestration of all of it | `mastermind/engine.py` |
 

@@ -7,6 +7,13 @@ universe:
   # Watchlist for signal generation. Real deployments expand this from a screener.
   # These defaults include the RESEARCH.md exemplar (RACE / Ferrari) plus liquid names.
   tickers: [AAPL, MSFT, NVDA, RACE, JPM, GOOGL, AMZN, META, LLY, COST, V, XOM]
+  # NICHE SPECIALISATION (§ differentiate for max upside): instead of trading the whole
+  # watchlist uniformly, the engine scores each name's *exploitability* for THIS
+  # strategy and concentrates on the best niche — re-selected every fold so the niche
+  # EVOLVES as names' behaviour changes.
+  auto_select_niche: true
+  niche_size: 6              # keep the top-K most exploitable names
+  niche_min_history: 252     # require ~1y before a name is eligible for the niche
 
 horizon:            # §2 swing sweet spot: 3d–4wk
   min_hold_days: 3
@@ -54,12 +61,18 @@ strategy:           # §5 conviction + meta-labeling, §7 principle gates
   catalyst_threshold: 0.6   # narrative_gap / recent_shock level that counts as a catalyst
   value_threshold: 0.75     # deep-value discount (vs own history) required for value entries
   quality_threshold: 0.60   # quality floor paired with deep value (anti value-trap)
+  # CONCENTRATION (§ maximise returns): one clean shot per catalyst, not 6x re-entries
+  # while the signal stays flagged. After a name is traded, it is on cooldown so the
+  # book concentrates capital into distinct, high-conviction events.
+  cooldown_days: 15         # min calendar days before re-entering the SAME name
+  concentrate: true         # tilt position size toward the highest-conviction names
 
-risk:               # §7 survival first — "balanced conviction"
-  risk_per_trade: 0.010     # 1.0% equity at risk to the stop
-  kelly_fraction: 0.5       # half-Kelly cap
-  max_positions: 8
-  max_weight_per_name: 0.20
+risk:               # §7 survival first — tuned toward RETURN MAXIMISATION (still capped)
+  risk_per_trade: 0.015     # 1.5% equity at risk to the stop (up from 1.0% — more punch)
+  kelly_fraction: 0.6       # 0.6-Kelly cap (more aggressive, still damped for survival)
+  conviction_tilt: 0.6      # extra size for top-conviction names (0 = flat, 1 = strong tilt)
+  max_positions: 6          # fewer, bigger, higher-conviction positions (concentration)
+  max_weight_per_name: 0.25
   max_gross_exposure: 1.0
   max_sector_positions: 3
   vol_target_annual: 0.15   # throttle exposure toward this
