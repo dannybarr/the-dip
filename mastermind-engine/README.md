@@ -78,6 +78,12 @@ python scripts/generate_signals.py
 # Backtest on your OWN data (a directory of <TICKER>.csv with date,open,high,low,close,volume):
 python scripts/run_backtest.py --csv /path/to/csvs
 
+# Or pull REAL market history (public S&P-500 2013-2018 daily OHLCV, no API key) and
+# run the whole stack (niche + sweep) on it:
+python scripts/fetch_real_data.py
+python scripts/run_backtest.py --csv data_cache/sp500 --config config/real_sp500.yaml
+python scripts/run_sweep.py    --csv data_cache/sp500 --config config/real_sp500.yaml
+
 # Tests:
 python -m pytest -q
 ```

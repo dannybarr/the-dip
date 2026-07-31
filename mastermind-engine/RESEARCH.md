@@ -252,9 +252,13 @@ Two clocks:
 
 News/sentiment enters through the **catalyst adapter interface** so any provider
 (FMP, news APIs, an LLM-based sentiment scorer) can plug in without touching the
-model. In this build sandbox live feeds are firewalled, so the pipeline is proven
-on synthetic + CSV data with the real adapters ready to switch on at deploy — the
-same pattern The Dip already uses for FMP.
+model. In this build sandbox the live *keyed* feeds (FMP/Yahoo) are firewalled, so the
+FMP adapter is import-safe and switches on at deploy — the same pattern The Dip uses.
+The full stack has been run end-to-end on **real S&P-500 daily OHLCV (2013–2018)** via
+the CSV adapter and a public dataset (`scripts/fetch_real_data.py`); see RESULTS.md §9
+for the honest walk-forward numbers. On price-only real data the value/quality pillar
+falls back to price proxies and the catalyst pillar to price-derived shock detection —
+point-in-time fundamentals and a real news feed are the next unlocks.
 
 ---
 

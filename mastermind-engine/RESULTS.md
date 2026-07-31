@@ -109,6 +109,70 @@ drawdown; cd 20 starves the book negative), **niche 6 is optimal** (4 too narrow
 dilutes expectancy 0.79% → 0.20%), and **sizing above 0.020 stops helping** as the
 weight cap re-binds. Reproduce with `python scripts/run_sweep.py`.
 
+## Stage 9 — REAL market data (S&P 500, 2013–2018)
+
+This is the meaningful test: the whole stack (features → labels → calibrated model →
+meta-labelled catalyst gate → evolving niche → walk-forward → self-review) run on
+**genuine daily OHLCV** for 22 liquid S&P-500 names (2013-02 to 2018-02, 1,259 days
+each), pulled from a public dataset — no API key. Fetch + split it yourself:
+
+```bash
+python scripts/fetch_real_data.py            # -> data_cache/sp500/ + config/real_sp500.yaml
+python scripts/run_backtest.py --csv data_cache/sp500 --config config/real_sp500.yaml
+python scripts/run_sweep.py    --csv data_cache/sp500 --config config/real_sp500.yaml
+```
+
+**Walk-forward result (purged, embargoed, costed):**
+
+| trades | win% | PF | expectancy | CAGR | Sharpe | maxDD | verdict |
+|---|---|---|---|---|---|---|---|
+| 85 | 42.4% | **1.10** | **+0.14%/trade** | 0.2% | 0.10 | −3.9% | MARGINAL |
+
+**Read this honestly.** The edge is **real but thin**. Target exits average **+3.5%**
+and stops **−2.4%** — the payoff asymmetry the engine is built to harvest is present —
+but a 42% win rate on *price-only* signals (no fundamentals, no news feed via CSV) in
+ultra-liquid mega-caps, net of 14 bps round-trip costs, leaves only a sliver of Sharpe.
+That is exactly what the literature predicts: short-term reversal/overreaction exists
+in equities but is small and heavily arbitraged in the most liquid names. **This is the
+truthful finding, and the engine reports it as such** rather than manufacturing an edge.
+
+**Capital-utilisation sweep on real data (maximise Sharpe s.t. maxDD ≥ −20%).** The
+sweep found a much better operating point than the synthetic-tuned default — and,
+tellingly, the **opposite** shape:
+
+| config | niche | cooldown | Sharpe | CAGR | maxDD | trades | expectancy |
+|---|---|---|---|---|---|---|---|
+| baseline (synthetic-tuned) | 6 | 10 | 0.10 | 0.2% | −3.9% | 85 | 0.14% |
+| **sweep-selected (real)** | **4** | **5** | **0.62** | **1.2%** | **−1.7%** | 69 | 0.67% |
+
+On real mega-caps the engine wins by concentrating **harder** (niche 4, the very best
+names) and re-engaging **faster** (cooldown 5) — the reverse of the synthetic optimum,
+because clean overreactions are scarcer in the most liquid names, so you take the few
+best and move on. The engine found this itself; nothing was hand-tuned.
+
+> **Honest caveat on the sweep number.** The sweep selects hyper-parameters over the
+> *whole* backtest, so Sharpe 0.62 carries in-sample selection bias — a fully rigorous
+> figure would nest the sweep inside the walk-forward (tune on the past, deploy on the
+> future). The robust takeaways are directional and hold regardless: (a) a real,
+> cost-surviving edge exists but is thin, and (b) concentration + fast re-engagement is
+> the right shape for it on this universe. Apply the winner with
+> `python scripts/run_sweep.py --csv data_cache/sp500 --config config/real_sp500.yaml --apply config/real_tuned.yaml`.
+
+What worked as designed on real data — the machinery, which is the deliverable:
+- **Unbiased self-review**: verdict MARGINAL, low-Sharpe flagged, and **no parameter
+  changes proposed** (insufficient evidence) — no overfitting to the past.
+- **Evolving niche**: 26 name-changes across 15 folds; it rotated from defensives
+  (CAT, CVX, JNJ, LLY, XOM) early to higher-beta names (BA, NVDA, JPM, V) later —
+  toward whatever gave cleaner setups.
+- **Model re-learning**: the top factor drifted `price_discount → rsi` over the run;
+  later folds were *not* decaying (fold-expectancy trend positive).
+
+Where the real edge would come from next (all deferred, honestly): point-in-time
+**fundamentals** (turns on the discounted-quality pillar, currently price-proxied on
+CSV), a **live news-sentiment catalyst feed** (the Ferrari-style thesis needs real
+narrative data), a **broader / higher-beta universe** (mega-caps are the hardest place
+to find overreaction), and **intraday or next-open microstructure** modelling.
+
 ## Honest caveats (see RESEARCH.md §10)
 
 - These are results on a **synthetic** harness that intentionally contains a

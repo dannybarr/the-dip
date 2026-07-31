@@ -1,0 +1,91 @@
+profile: balanced_conviction
+universe:
+  tickers:
+  - AAPL
+  - MSFT
+  - NVDA
+  - GOOGL
+  - AMZN
+  - FB
+  - NFLX
+  - JPM
+  - GS
+  - LLY
+  - JNJ
+  - PG
+  - XOM
+  - CVX
+  - COST
+  - WMT
+  - HD
+  - DIS
+  - BA
+  - CAT
+  - V
+  - INTC
+  auto_select_niche: true
+  niche_size: 6
+  niche_min_history: 252
+horizon:
+  min_hold_days: 3
+  max_hold_days: 20
+labeling:
+  profit_take_atr: 2.0
+  stop_loss_atr: 1.5
+  vertical_days: 20
+  max_barrier_pct: 0.08
+features:
+  momentum_windows:
+  - 5
+  - 10
+  - 20
+  - 50
+  rsi_period: 14
+  atr_period: 14
+  bb_period: 20
+  vol_window: 20
+  value_lookback: 252
+model:
+  type: hist_gbm
+  calibrate: true
+  calibration_method: sigmoid
+  calibration_cv: 2
+  meta_label: true
+  min_train_samples: 250
+  params:
+    max_depth: 4
+    learning_rate: 0.05
+    max_iter: 300
+    l2_regularization: 1.0
+    min_samples_leaf: 20
+strategy:
+  min_conviction: 0.0
+  min_edge: 0.4
+  quality_gate: true
+  require_catalyst_or_value: true
+  catalyst_threshold: 0.6
+  value_threshold: 0.75
+  quality_threshold: 0.6
+  cooldown_days: 10
+  concentrate: true
+risk:
+  risk_per_trade: 0.02
+  kelly_fraction: 0.6
+  conviction_tilt: 0.6
+  max_positions: 6
+  max_weight_per_name: 0.3
+  max_gross_exposure: 1.0
+  max_sector_positions: 3
+  vol_target_annual: 0.15
+backtest:
+  initial_equity: 100000
+  commission_bps: 2.0
+  slippage_bps: 5.0
+  train_window_days: 504
+  test_window_days: 90
+  purge_days: 20
+  embargo_days: 5
+review:
+  min_trades_for_change: 30
+  overfit_sharpe_ratio: 0.6
+  alpha_decay_windows: 3

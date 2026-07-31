@@ -61,12 +61,18 @@ class EdgeModel:
     # ---- fit / predict ----------------------------------------------------
     def fit(self, X: pd.DataFrame, y_label: pd.Series, sample_weight=None) -> "EdgeModel":
         """y_label is the triple-barrier label {+1,0,-1}; we learn P(win = +1)."""
-        self.features = list(X.columns)
+        # Drop zero-variance (constant) columns: they carry no signal and break the
+        # GBM binner (sliding_window_view needs >=2 distinct values). Common on real
+        # data where a feature can be flat across a fold; harmless to remove.
+        nunique = X.nunique(dropna=True)
+        self.features = [c for c in X.columns if nunique.get(c, 0) > 1]
+        if self.features:
+            X = X[self.features]
         y = (y_label.values == 1).astype(int)     # binary: profit-take hit
         self._fallback_rate = float(y.mean()) if len(y) else 0.0
 
         min_n = self.cfg.get("model.min_train_samples", 250)
-        if len(y) < min_n or y.sum() < 10 or (len(y) - y.sum()) < 10:
+        if not self.features or len(y) < min_n or y.sum() < 10 or (len(y) - y.sum()) < 10:
             # Not enough signal to train a real model — degrade to base rate.
             self._pipe = None
             self._fitted = True
