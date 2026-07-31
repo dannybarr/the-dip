@@ -45,6 +45,9 @@ universe/     selector.py — adaptive NICHE selection: score each name's exploi
                             and concentrate on the best K, re-selected/EVOLVING per fold
 risk/         manager.py — fixed-fractional + fractional-Kelly sizing, conviction tilt,
                             per-name cooldown, portfolio caps (concentration)
+optimize/     sweep.py — capital-utilisation sweep: grid the deployment knobs and pick
+                         the point that maximises return within a drawdown budget
+                         (shared fold-cache trains once, replays the grid cheaply)
 backtest/     engine.py  walk-forward, purged, embargoed, realistic costs
               metrics.py Sharpe/Sortino/DD/PF/expectancy
 review/       self_review.py — unbiased self-critique + evidence-gated optimisation
@@ -63,6 +66,11 @@ python scripts/run_backtest.py
 
 # Run the self-review OPTIMISATION loop (backtest -> critique -> re-test):
 python scripts/run_backtest.py --optimise
+
+# Capital-utilisation sweep: grid niche_size x cooldown x sizing, and pick the point
+# that MAXIMISES return within a drawdown budget (trains folds once, replays the grid):
+python scripts/run_sweep.py --max-dd 0.20 --objective cagr
+python scripts/run_sweep.py --max-dd 0.15 --apply config/tuned.yaml   # save the winner
 
 # Today's ranked, risk-sized, principle-gated signals:
 python scripts/generate_signals.py

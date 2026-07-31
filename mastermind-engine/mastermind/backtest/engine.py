@@ -126,10 +126,20 @@ class WalkForwardBacktester:
         return X, y, w
 
     # ---- main loop --------------------------------------------------------
-    def run(self, universe: Dict[str, pd.DataFrame], adapter=None) -> BacktestResult:
+    def run(self, universe: Dict[str, pd.DataFrame], adapter=None,
+            fold_cache: Optional[dict] = None) -> BacktestResult:
+        """Walk-forward backtest.
+
+        `fold_cache` (a plain dict) memoises the EXPENSIVE per-fold work — model fit,
+        edge scoring, full niche ranking, factor importances — keyed by fold date.
+        Because those depend only on the model/labeling/feature config (NOT on
+        niche_size / cooldown / risk sizing), a parameter sweep over those knobs can
+        share one cache and pay the training cost once. Pass the same dict across runs.
+        """
         feats, labels = self._prepare(universe, adapter)
         all_dates = sorted(set().union(*[set(f.index) for f in feats.values()]))
         all_dates = pd.DatetimeIndex(all_dates)
+        niche_size = self.cfg.get("universe.niche_size", 6)
 
         train_w = pd.Timedelta(days=self.cfg.get("backtest.train_window_days", 504))
         test_w = pd.Timedelta(days=self.cfg.get("backtest.test_window_days", 63))
@@ -169,27 +179,39 @@ class WalkForwardBacktester:
                 fold_start = today
                 fold_end = today + test_w
                 train_start = today - train_w
-                X, y, w = self._training_matrix(feats, labels, universe,
-                                                train_start, today)
-                if X is not None and len(X) >= min_train:
-                    model = EdgeModel(self.cfg).fit(X, y, sample_weight=w)
-                    edge_cache = self._score_fold(model, feats, today, fold_end)
-                    # Re-select the EVOLVING niche using only data up to `today`.
-                    niche_rows = []
-                    if auto_niche:
-                        picks = self.niche.select(feats, labels, as_of=today)
-                        active_niche = {p.ticker for p in picks}
-                        niche_rows = [p.as_dict() for p in picks]
-                    # Track which factors the model is leaning on (learning over time).
-                    imp = model.permutation_importance(X, y)
-                    top_factors = list(imp.head(5).index) if imp is not None else []
-                    fold_metrics.append({
-                        "date": str(today.date()), "train_n": int(len(X)),
-                        "niche": sorted(active_niche) if active_niche else None,
-                        "niche_detail": niche_rows, "top_factors": top_factors,
-                    })
+                cached = fold_cache.get(today) if fold_cache is not None else None
+                if cached is not None:
+                    model, edge_cache, niche_ranked, niche_rows, top_factors, train_n = \
+                        cached
                 else:
-                    model = model  # keep previous model if we can't retrain yet
+                    X, y, w = self._training_matrix(feats, labels, universe,
+                                                    train_start, today)
+                    if X is not None and len(X) >= min_train:
+                        model = EdgeModel(self.cfg).fit(X, y, sample_weight=w)
+                        edge_cache = self._score_fold(model, feats, today, fold_end)
+                        # Rank the WHOLE universe by exploitability (niche_size applied
+                        # below), so a sweep over niche_size can reuse one ranking.
+                        picks = self.niche.select(feats, labels, as_of=today,
+                                                  k=len(feats)) if auto_niche else []
+                        niche_ranked = [p.ticker for p in picks]
+                        niche_rows = [p.as_dict() for p in picks]
+                        imp = model.permutation_importance(X, y)
+                        top_factors = list(imp.head(5).index) if imp is not None else []
+                        train_n = int(len(X))
+                        if fold_cache is not None:
+                            fold_cache[today] = (model, edge_cache, niche_ranked,
+                                                 niche_rows, top_factors, train_n)
+                    else:
+                        niche_ranked, niche_rows, top_factors, train_n = [], [], [], 0
+
+                if model is not None and (cached is not None or train_n > 0):
+                    # Apply THIS run's niche_size to the shared ranking (top-K).
+                    active_niche = set(niche_ranked[:niche_size]) if niche_ranked else None
+                    fold_metrics.append({
+                        "date": str(today.date()), "train_n": train_n,
+                        "niche": sorted(active_niche) if active_niche else None,
+                        "niche_detail": niche_rows[:niche_size], "top_factors": top_factors,
+                    })
 
             # 1) manage OPEN positions (check stop/target/time on today's bar).
             for t in list(open_pos.keys()):

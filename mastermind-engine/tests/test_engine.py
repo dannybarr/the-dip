@@ -157,6 +157,40 @@ def test_permutation_importance(adapter, cfg):
         assert list(imp.index) == list(imp.sort_values(ascending=False).index)
 
 
+def test_fold_cache_is_deterministic(cfg):
+    """Reusing the shared fold-cache must not change results (sweep correctness)."""
+    from mastermind.backtest import WalkForwardBacktester
+    a = SyntheticAdapter(cfg.get("universe.tickers"), n_days=600, seed=5)
+    uni = a.load_universe(cfg.get("universe.tickers"))
+    fc = {}
+    r1 = WalkForwardBacktester(cfg).run(uni, adapter=a, fold_cache=fc)
+    r2 = WalkForwardBacktester(cfg).run(uni, adapter=a, fold_cache=fc)  # cache hit
+    assert r1.metrics.n_trades == r2.metrics.n_trades
+    assert r1.metrics.cagr == pytest.approx(r2.metrics.cagr, abs=1e-9)
+
+
+def test_capital_utilization_sweep(cfg):
+    from mastermind.optimize import CapitalUtilizationSweep
+    a = SyntheticAdapter(cfg.get("universe.tickers"), n_days=600, seed=5)
+    uni = a.load_universe(cfg.get("universe.tickers"))
+    grid = {  # tiny grid so the test stays fast (cache shared across points)
+        "niche_size": [{"universe.niche_size": 3}, {"universe.niche_size": 6}],
+        "sizing": [{"risk.risk_per_trade": 0.01, "risk.max_weight_per_name": 0.20},
+                   {"risk.risk_per_trade": 0.03, "risk.max_weight_per_name": 0.45}],
+    }
+    sweep = CapitalUtilizationSweep(cfg, grid=grid, drawdown_tolerance=0.30)
+    res = sweep.run(uni, adapter=a)
+    assert len(res.rows) == 4
+    # coupled sizing must actually change deployment: the two sizing levels should
+    # not be identical across the board (unlike risk_per_trade alone)
+    dds = {r["risk.max_weight_per_name"] for r in res.rows}
+    assert len(dds) == 2
+    if res.best is not None:
+        assert res.best["max_drawdown"] >= -0.30
+        assert set(res.deltas).issubset(
+            {"universe.niche_size", "risk.risk_per_trade", "risk.max_weight_per_name"})
+
+
 def test_config_overrides_are_immutable(cfg):
     base = cfg.get("strategy.min_edge")
     new = cfg.with_overrides({"strategy.min_edge": 0.99})

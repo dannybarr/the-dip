@@ -73,6 +73,42 @@ the dislocation explicit and using the model to *filter* is the design that work
    Selecting by model confidence alone made returns *worse*; making the catalyst the
    primary trigger and the model the filter made them positive.
 
+## Stage 8 — Capital-utilisation sweep (return within a drawdown budget)
+
+Concentration lifted per-trade edge but left CAGR low (capital idle). The sweep grids
+the three deployment levers and, via a **constrained objective** (maximise return s.t.
+`max drawdown ≥ −20%`), picks the point that works the book hardest without breaching
+the risk budget. All 27 fold-models are trained ONCE (shared cache) and the grid is
+replayed cheaply — the whole 27-point sweep runs in the time of ~2 backtests.
+
+A first pass exposed that `risk_per_trade` alone is **inert** above ~1% (a ~4% stop
+already saturates the per-name weight cap), so the sizing axis was made to move
+`risk_per_trade` **and** `max_weight_per_name` together. The grid then reads cleanly:
+
+| niche | cooldown | risk/wt | CAGR | Sharpe | maxDD | trades | expectancy |
+|---|---|---|---|---|---|---|---|
+| **6** | **10** | **0.020/0.30** | **1.3%** | **0.41** | −5.9% | 121 | 0.79% |
+| 6 | 10 | 0.010/0.20 | 1.0% | 0.35 | −5.7% | 121 | 0.79% |
+| 9 | 10 | 0.020/0.30 | 0.8% | 0.27 | −5.9% | 143 | 0.20% |
+| 4 | 10 | 0.020/0.30 | 0.5% | 0.27 | −3.6% | 66 | 1.05% |
+| 6 | 5 | 0.020/0.30 | 0.9% | 0.24 | −9.8% | 180 | 0.89% |
+| 6 | 20 | 0.020/0.30 | −0.7% | −0.29 | −7.1% | 80 | 0.79% |
+
+**Selected (now the default): niche_size 6, cooldown 10, risk_per_trade 0.020 /
+max_weight 0.30** — it dominates the prior default on every axis at once:
+
+| | Prior default | **Sweep-optimal** |
+|---|---|---|
+| CAGR | 0.7% | **1.3%** (≈2×) |
+| Sharpe | 0.27 | **0.41** (+52%) |
+| Max drawdown | −6.2% | **−5.9%** |
+| Trades | 94 | 121 |
+
+What the grid teaches: **cooldown 10 is the sweet spot** (cd 5 over-trades into deeper
+drawdown; cd 20 starves the book negative), **niche 6 is optimal** (4 too narrow, 9
+dilutes expectancy 0.79% → 0.20%), and **sizing above 0.020 stops helping** as the
+weight cap re-binds. Reproduce with `python scripts/run_sweep.py`.
+
 ## Honest caveats (see RESEARCH.md §10)
 
 - These are results on a **synthetic** harness that intentionally contains a

@@ -227,6 +227,15 @@ The output is a structured, human-readable **self-review report** plus a machine
 to keep up to date" requirement, implemented as a disciplined feedback controller
 rather than a black box that silently mutates.
 
+**Capital-utilisation sweep.** Beyond the fold-to-fold controller, a constrained
+optimiser (`optimize/sweep.py`) grids the deployment levers — niche breadth, cooldown,
+and sizing aggressiveness — and picks the point that **maximises return subject to a
+drawdown budget**. It shares one fold-cache across the grid (the model training doesn't
+depend on these knobs), so the whole sweep costs about two backtests instead of dozens.
+This is how the engine answers "how hard should the book work?" with evidence, not a
+guess — and it exposed that per-trade risk saturates the per-name weight cap, so the two
+must be tuned together.
+
 → `mastermind/review/self_review.py`
 
 ---
@@ -302,6 +311,7 @@ edge is strongest, and rotates that focus as the market changes.
 | §7 sizing & survival | `mastermind/risk/manager.py` |
 | §8 self-review & optimisation | `mastermind/review/self_review.py` |
 | §10b niche selection & evolution | `mastermind/universe/selector.py` |
+| §8 capital-utilisation sweep | `mastermind/optimize/sweep.py` |
 | §9 data/news adapters | `mastermind/data/` |
 | orchestration of all of it | `mastermind/engine.py` |
 

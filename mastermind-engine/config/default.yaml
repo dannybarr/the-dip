@@ -64,15 +64,15 @@ strategy:           # §5 conviction + meta-labeling, §7 principle gates
   # CONCENTRATION (§ maximise returns): one clean shot per catalyst, not 6x re-entries
   # while the signal stays flagged. After a name is traded, it is on cooldown so the
   # book concentrates capital into distinct, high-conviction events.
-  cooldown_days: 15         # min calendar days before re-entering the SAME name
+  cooldown_days: 10         # min days before re-entering a name (sweep-optimal: cd10)
   concentrate: true         # tilt position size toward the highest-conviction names
 
 risk:               # §7 survival first — tuned toward RETURN MAXIMISATION (still capped)
-  risk_per_trade: 0.015     # 1.5% equity at risk to the stop (up from 1.0% — more punch)
+  risk_per_trade: 0.020     # 2.0% equity at risk to the stop (capital-utilisation sweep)
   kelly_fraction: 0.6       # 0.6-Kelly cap (more aggressive, still damped for survival)
   conviction_tilt: 0.6      # extra size for top-conviction names (0 = flat, 1 = strong tilt)
   max_positions: 6          # fewer, bigger, higher-conviction positions (concentration)
-  max_weight_per_name: 0.25
+  max_weight_per_name: 0.30 # sweep-optimal (paired with risk_per_trade so sizing bites)
   max_gross_exposure: 1.0
   max_sector_positions: 3
   vol_target_annual: 0.15   # throttle exposure toward this
