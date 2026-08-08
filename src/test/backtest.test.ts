@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   formatReport,
   metricsFor,
@@ -7,6 +7,15 @@ import {
   type Observation,
   type TickerHistory,
 } from "@/backtest/harness";
+import { LIVE_SESSION_WINDOW } from "@/lib/types";
+import { analyze } from "@/lib/engine/analyst";
+
+// Passthrough spy: behaviour is unchanged, but it records what the harness
+// actually hands the scoring engine so the window invariant can be asserted.
+vi.mock("@/lib/engine/analyst", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/engine/analyst")>();
+  return { ...actual, analyze: vi.fn(actual.analyze) };
+});
 
 /** Builds observations at a single horizon from (score, forwardReturn) pairs. */
 function obs(pairs: [number, number][], horizon = 5): Observation[] {
@@ -74,12 +83,12 @@ describe("metrics measurement (the harness must measure a known relationship cor
 
 describe("walk-forward has no look-ahead", () => {
   // Three correlated names so the market factor and peer basket are non-trivial.
-  function makeHistory(ticker: string, seed: number): TickerHistory {
+  function makeHistory(ticker: string, seed: number, days = 260): TickerHistory {
     let s = seed;
     const rand = () => ((s = (s * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff - 0.5);
     const bars: TickerHistory["bars"] = [];
     let price = 100;
-    for (let i = 0; i < 260; i++) {
+    for (let i = 0; i < days; i++) {
       // Shared drift + idiosyncratic noise; inject a sharp dip at day 200.
       const shock = i === 200 ? -0.08 : 0;
       price *= 1 + 0.0002 + rand() * 0.01 + shock;
@@ -110,6 +119,26 @@ describe("walk-forward has no look-ahead", () => {
   it("only emits observations on genuine dip dates", () => {
     const observations = runBacktest(histories, { horizons: [5], minHistory: 150, requireDip: true });
     for (const o of observations) expect(o.dipPctWeek).toBeLessThan(0);
+  });
+
+  it("never scores a longer series than the live app does", () => {
+    // Histories far longer than the live window, so an unsliced harness would
+    // hand analyze() a series that grows on every step.
+    const long = [makeHistory("AAA", 3, 760), makeHistory("BBB", 9, 760), makeHistory("CCC", 21, 760)];
+    vi.mocked(analyze).mockClear();
+    const observations = runBacktest(long, {
+      horizons: [5],
+      minHistory: LIVE_SESSION_WINDOW,
+      requireDip: true,
+    });
+    expect(observations.length).toBeGreaterThan(0);
+
+    const lengths = vi.mocked(analyze).mock.calls.map((c) => c[1]?.length ?? 0);
+    expect(lengths.length).toBeGreaterThan(0);
+    // Nothing longer than the live window...
+    expect(Math.max(...lengths)).toBe(LIVE_SESSION_WINDOW);
+    // ...and the slice genuinely engaged rather than the histories being short.
+    expect(Math.min(...lengths)).toBe(LIVE_SESSION_WINDOW);
   });
 
   it("produces a readable report without throwing", () => {

@@ -40,4 +40,10 @@ drives decisions (context only, veto-down at most). If a component of a score is
 constant across reruns for the same entity, it is an assumption, not a signal —
 surface it as one. Never backtest a signal that contains a look-ahead snapshot.
 
-Related: [[dip-engine-assumes-negative-move]], [[fmp-free-tier-constraints]]
+Update (2026-08-08): the harness has now run. The rebuilt catalyst pillar is
+measurable, which was the point, and what it measured is that the Signal Score
+does not predict forward returns and the shock/no-news split is not supported.
+See [[signal-score-has-no-measured-edge]].
+
+Related: [[signal-score-has-no-measured-edge]],
+[[dip-engine-assumes-negative-move]], [[fmp-free-tier-constraints]]

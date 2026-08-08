@@ -18,6 +18,7 @@
  *    the report footer produced by `formatReport`.
  */
 import type { PricePoint, StockInput } from "@/lib/types";
+import { LIVE_SESSION_WINDOW } from "@/lib/types";
 import { COVERAGE } from "@/data/coverage";
 import { analyze, type MarketContext } from "@/lib/engine/analyst";
 import { buildMarketFactor, type DipCause } from "@/lib/engine/decompose";
@@ -32,7 +33,12 @@ export interface TickerHistory {
 export interface BacktestConfig {
   /** Forward-return horizons to measure, in sessions. */
   horizons: number[];
-  /** Minimum series length before a date is eligible (decomposition needs ~150). */
+  /**
+   * Minimum series length before a date is eligible. Defaults to the live
+   * session window: below it the series handed to `analyze()` is shorter than
+   * the one the live app scores, so `high52w` and the 200-day SMA would be
+   * computed over fewer bars and the backtest would measure a different signal.
+   */
   minHistory: number;
   /** Evaluate a name only when it is in a genuine weekly dip. */
   requireDip: boolean;
@@ -40,7 +46,7 @@ export interface BacktestConfig {
 
 export const DEFAULT_CONFIG: BacktestConfig = {
   horizons: [5, 20, 60],
-  minHistory: 150,
+  minHistory: LIVE_SESSION_WINDOW,
   requireDip: true,
 };
 
@@ -141,8 +147,13 @@ export function runBacktest(histories: TickerHistory[], config: BacktestConfig =
     // a past date.
     const truncated: { input: StockInput; series: PricePoint[]; h: TickerHistory }[] = [];
     for (const h of histories) {
-      const bars = h.bars.filter((b) => b.d <= asOf);
-      if (bars.length < config.minHistory) continue;
+      const upTo = h.bars.filter((b) => b.d <= asOf);
+      if (upTo.length < config.minHistory) continue;
+      // Slice to the same window the live provider serves. Without this the
+      // series grows with every step, so `high52w` drifts into an all-time high
+      // and `sma200` averages whatever is available — the backtest would score a
+      // signal the live app never computes.
+      const bars = upTo.slice(-LIVE_SESSION_WINDOW);
       const series: PricePoint[] = bars.map((b) => ({ d: b.d, c: b.c, o: b.o }));
       truncated.push({ input: stockAt(h, bars), series, h });
     }

@@ -91,6 +91,18 @@ export interface PricePoint {
   o?: number;
 }
 
+/**
+ * How many daily sessions of history the engine scores against, everywhere.
+ *
+ * This has to be one number. `computeTechnicals` derives `high52w`, the 200-day
+ * SMA and the drawdown from whatever array it is handed, so feeding it a longer
+ * series silently changes those readings: `high52w` becomes an all-time high and
+ * `sma()` quietly averages fewer bars than its name claims. The live provider
+ * caps history here, so the backtest must slice to the same length or it
+ * measures a different signal from the one the app publishes.
+ */
+export const LIVE_SESSION_WINDOW = 300;
+
 export interface Technicals {
   rsi14: number;
   sma50: number;

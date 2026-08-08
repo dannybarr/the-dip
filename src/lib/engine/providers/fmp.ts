@@ -16,6 +16,8 @@
  * Responses are cached in localStorage so a session stays inside the budget.
  */
 
+import { LIVE_SESSION_WINDOW } from "@/lib/types";
+
 const BASE = "https://financialmodelingprep.com/stable";
 
 // In a production build we route every request through the serverless proxy so
@@ -157,8 +159,13 @@ export async function getProfile(symbol: string): Promise<FmpProfile | undefined
 }
 
 /** Daily OHLC, oldest → newest, capped to ~14 months so the engine's 252-day
- *  window and 52-week stats are well covered without oversized payloads. */
-export async function getDailyHistory(symbol: string, sessions = 300): Promise<FmpEod[]> {
+ *  window and 52-week stats are well covered without oversized payloads.
+ *  The cap is shared with the backtest via LIVE_SESSION_WINDOW: both must slice
+ *  to the same length or the two score different signals. */
+export async function getDailyHistory(
+  symbol: string,
+  sessions = LIVE_SESSION_WINDOW,
+): Promise<FmpEod[]> {
   const raw = await fmpGet<FmpEod[]>("historical-price-eod/full", { symbol }, TTL_PRICES);
   if (!Array.isArray(raw) || raw.length === 0) return [];
   const asc = [...raw].reverse(); // FMP returns newest-first

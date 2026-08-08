@@ -15,6 +15,9 @@ dist-ssr
 .env
 .vercel
 
+# Backtest price cache — regenerable with `npm run backtest -- --refresh`
+/data
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
