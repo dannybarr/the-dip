@@ -14,6 +14,15 @@ export function PillarBars({ pillars, detailed = false }: { pillars: PillarScore
               <div className="flex items-baseline gap-2">
                 <span className="text-xs font-semibold text-foreground">{meta.label}</span>
                 <span className="micro">{(meta.weight * 100).toFixed(0)}%</span>
+                {p.provenance === "signal" ? (
+                  <span className="rounded-sm bg-cyanline/15 px-1 py-px text-[9px] font-semibold uppercase tracking-wider text-cyanline">
+                    Signal
+                  </span>
+                ) : (
+                  <span className="rounded-sm bg-panel-2 px-1 py-px text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {p.provenance === "mixed" ? "Mixed" : "Overlay"}
+                  </span>
+                )}
               </div>
               <span className="num text-sm font-bold" style={{ color }}>{p.score}</span>
             </div>

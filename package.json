@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "backtest": "vite-node src/backtest/run.ts"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.2.7",

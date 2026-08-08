@@ -48,7 +48,11 @@ async function buildOne(overlay: CoverageOverlay, isoDate: string): Promise<Live
 
   const closes = history.map((h) => h.close);
   const price = num(profile?.price, closes[closes.length - 1]);
-  const series: PricePoint[] = history.map((h) => ({ d: h.date, c: Number(h.close.toFixed(2)) }));
+  const series: PricePoint[] = history.map((h) => ({
+    d: h.date,
+    c: Number(h.close.toFixed(2)),
+    o: Number.isFinite(h.open) ? Number(h.open.toFixed(2)) : undefined,
+  }));
 
   const dipPctDay = num(profile?.changePercentage, trailingMove(closes, 1));
   const dipPctWeek = trailingMove(closes, 5);

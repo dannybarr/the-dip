@@ -7,9 +7,11 @@ import type {
   TradePlan,
   Verdict,
 } from "@/lib/types";
+import type { PillarKey } from "@/lib/types";
 import { PILLAR_META, VERDICT_META, CATALYST_LABELS } from "@/lib/types";
 import { buildSeries } from "./series";
 import { computeTechnicals } from "./indicators";
+import { decomposeDip, type DipDecomposition } from "./decompose";
 
 const clamp = (v: number, lo = 0, hi = 100) => Math.min(hi, Math.max(lo, v));
 /** Linear map of value from [a,b] to [0,100], clamped. */
@@ -39,7 +41,9 @@ function scoreQuality(s: StockInput): PillarScore {
     note = `Adequate but not elite economics: ${f.roicPct.toFixed(0)}% ROIC, ${f.opMarginPct.toFixed(0)}% operating margin. Recovery depends more on the catalyst clearing than on business gravity.`;
   else
     note = `Weak underlying economics (${f.roicPct.toFixed(0)}% ROIC, ${f.netDebtToEbitda.toFixed(1)}x net debt/EBITDA). There is no quality floor under this price.`;
-  return { key: "quality", score: Math.round(score), note };
+  // Mixed: live ROIC/margins/leverage, but moat, balance-sheet rating and
+  // forward growth are hand-authored (see coverage.ts).
+  return { key: "quality", score: Math.round(score), note, provenance: "mixed" };
 }
 
 // ---------------------------------------------------------------------------
@@ -63,7 +67,9 @@ function scoreValuation(s: StockInput): PillarScore {
     note = `The reset removed froth rather than creating a bargain: ${f.peForward.toFixed(0)}x forward vs ${f.pe5yAvg.toFixed(0)}x historical average. Fairly priced for the new facts.`;
   else
     note = `Still expensive after the fall (${f.peForward.toFixed(0)}x forward, ${f.fcfYieldPct.toFixed(1)}% FCF yield). The dip corrected valuation, it did not create opportunity.`;
-  return { key: "valuation", score: Math.round(score), note };
+  // Mixed: live P/E and FCF yield, measured against a hand-authored 5y P/E norm
+  // and authored forward EPS growth (the PEG input).
+  return { key: "valuation", score: Math.round(score), note, provenance: "mixed" };
 }
 
 // ---------------------------------------------------------------------------
@@ -85,28 +91,67 @@ function scoreDipCharacter(s: StockInput, t: Technicals): PillarScore {
     note = `Meaningful but orderly repricing (${t.dipZScore.toFixed(1)}σ, ${s.volumeRatio.toFixed(1)}x volume). Sellers are deliberate: the tape is digesting new information, not panicking.`;
   else
     note = `A slow bleed, not a flush: the stock is ${Math.abs(t.drawdownFrom52wHighPct).toFixed(0)}% off its high without a volume climax. Persistent distribution tends to persist.`;
-  return { key: "dipCharacter", score: Math.round(score), note };
+  return { key: "dipCharacter", score: Math.round(score), note, provenance: "signal" };
 }
 
 // ---------------------------------------------------------------------------
-// Pillar 4 — Catalyst Severity (22%)
+// Pillar 4 — Catalyst Character (22%)
 // The single most important question: is earnings power impaired?
+//
+// Previously this read two hand-authored constants (severity, transience) that
+// never changed with the actual dip, so every name carried a fixed catalyst
+// score forever. It now scores the *measured* decomposition of the specific
+// move: a fall the market or sector caused is not impairment; a company-specific
+// fall on an information signature probably is. See decompose.ts.
 // ---------------------------------------------------------------------------
-function scoreCatalyst(s: StockInput): PillarScore {
-  const c = s.catalyst;
-  const transience = scale(c.transience, 0, 10);
-  const severity = scale(10 - c.severity, 0, 10);
-  const score = transience * 0.55 + severity * 0.45;
+function scoreCatalyst(s: StockInput, decomp?: DipDecomposition): PillarScore {
+  // No universe context (single-name view, or a degraded feed) → we cannot
+  // measure cause. Return a neutral, honestly-labelled score rather than
+  // reviving the old constant. It neither helps nor gates a verdict.
+  if (!decomp || decomp.cause === "UNKNOWN") {
+    return {
+      key: "catalyst",
+      score: 50,
+      note: "Cause of the dip could not be measured without a market and peer context. Treat the catalyst as undetermined rather than assumed benign.",
+      provenance: "signal",
+    };
+  }
 
-  const label = CATALYST_LABELS[c.type];
-  let note: string;
-  if (score >= 65)
-    note = `${label}: the driver is transient (${c.transience}/10) with limited earnings impairment (severity ${c.severity}/10). Time is on the buyer's side.`;
-  else if (score >= 40)
-    note = `${label}: partially structural. Some earnings power is genuinely lost (severity ${c.severity}/10); underwrite the new baseline, not the old one.`;
-  else
-    note = `${label}: this is thesis damage, not noise (severity ${c.severity}/10, transience ${c.transience}/10). The market is repricing the business, and it is probably right.`;
-  return { key: "catalyst", score: Math.round(score), note };
+  // Higher score = more likely a mean-reverting, non-impairing cause.
+  // Systematic falls (market/sector) score well: nothing about the business
+  // broke. Idiosyncratic shocks score worst: information arrived, and prices
+  // that fall on news keep drifting (post-earnings-announcement drift).
+  let base: number;
+  switch (decomp.cause) {
+    case "MARKET_BETA":
+      base = 82;
+      break;
+    case "SECTOR_ROTATION":
+      // Rotation isn't impairment, but it can persist while money leaves.
+      base = 66;
+      break;
+    case "IDIOSYNCRATIC_NO_NEWS":
+      // The reversal case: a company-specific fall with no informational fingerprint.
+      base = 60;
+      break;
+    case "IDIOSYNCRATIC_SHOCK":
+      // The falling knife: news landed, drift continues.
+      base = 22;
+      break;
+    default:
+      base = 50;
+  }
+
+  // Push the idiosyncratic cases by how extreme the residual is. A deeper
+  // shock is worse; a milder no-news wobble is a cleaner reversion setup.
+  if (decomp.cause === "IDIOSYNCRATIC_SHOCK") {
+    base -= clamp((Math.abs(decomp.residualZ) - 2.5) * 6, 0, 15);
+  } else if (decomp.cause === "IDIOSYNCRATIC_NO_NEWS") {
+    base += clamp((1.5 - Math.abs(decomp.residualZ)) * 8, -10, 12);
+  }
+
+  const score = clamp(base);
+  return { key: "catalyst", score: Math.round(score), note: decomp.note, provenance: "signal" };
 }
 
 // ---------------------------------------------------------------------------
@@ -130,7 +175,7 @@ function scoreTechnical(s: StockInput, t: Technicals): PillarScore {
     note = `Stretched but not extreme: RSI ${t.rsi14.toFixed(0)}, support at $${t.supportLevel.toFixed(2)}. A tradeable level exists, though the tape hasn't fully reset.`;
   else
     note = `No technical floor in sight: RSI ${t.rsi14.toFixed(0)} with the 200-day at $${t.sma200.toFixed(2)} ${s.price < t.sma200 ? "overhead as resistance" : "far below"}. Structure must repair first.`;
-  return { key: "technical", score: Math.round(score), note };
+  return { key: "technical", score: Math.round(score), note, provenance: "signal" };
 }
 
 // ---------------------------------------------------------------------------
@@ -149,21 +194,52 @@ function scoreFlow(s: StockInput, quality: number): PillarScore {
     note = `Positioning is unremarkable: ${s.shortInterestPct.toFixed(1)}% short interest, ${s.volumeRatio.toFixed(1)}x volume. Flow won't drive the recovery; fundamentals must.`;
   else
     note = `Crowded and informed bears (${s.shortInterestPct.toFixed(1)}% short interest) with no capitulation volume. The smart money on the other side has done its work.`;
-  return { key: "flow", score: Math.round(score), note };
+  // Mixed: live volume ratio, but short interest is hand-authored (coverage.ts).
+  return { key: "flow", score: Math.round(score), note, provenance: "mixed" };
 }
 
 // ---------------------------------------------------------------------------
 // Composite, verdict, trade plan
 // ---------------------------------------------------------------------------
-function verdictFor(score: number, catalystScore: number, qualityScore: number): Verdict {
-  // Hard overrides: no composite can rescue structural impairment.
-  if (catalystScore < 25 && qualityScore < 40) return "AVOID";
-  // Buy-side verdicts are gated on the catalyst: a great composite built on a
-  // rotten reason to fall is a value trap, not an entry.
-  if (score >= 75 && catalystScore >= 55 && qualityScore >= 55) return "BUY_THE_DIP";
-  if (score >= 63 && catalystScore >= 52) return "ACCUMULATE";
-  if (score >= 48) return "WATCHLIST";
-  if (score >= 32) return "FALLING_KNIFE";
+
+/** Pillars whose value is genuinely point-in-time and price-derived. Only these
+ *  form the backtestable Signal Score. The mixed pillars carry hand-authored
+ *  snapshots (moat, 5y P/E norm, short interest) that cannot be reconstructed
+ *  historically, so they inform context but never the tested signal. */
+const SIGNAL_KEYS = new Set<PillarKey>(["catalyst", "dipCharacter", "technical"]);
+
+/** Weighted composite over a subset of pillars, renormalised to that subset so
+ *  the result is a real 0–100 regardless of how many pillars are included. */
+function compositeOf(pillars: PillarScore[], keys: Set<PillarKey>): number {
+  const chosen = pillars.filter((p) => keys.has(p.key));
+  const totalWeight = chosen.reduce((s, p) => s + PILLAR_META[p.key].weight, 0);
+  if (totalWeight <= 0) return 0;
+  return Math.round(
+    chosen.reduce((s, p) => s + p.score * PILLAR_META[p.key].weight, 0) / totalWeight,
+  );
+}
+
+/**
+ * Verdict is driven by the Signal Score. The Overlay View (quality and the rest
+ * of the hand-authored context) can only veto *down* — weak economics caps the
+ * verdict, but strong economics never manufactures a buy from a poor signal.
+ *
+ * Thresholds here are a provisional calibration. Step 3's walk-forward backtest
+ * is what sets them; until it runs, they are informed guesses, not results.
+ */
+function verdictFor(signalScore: number, catalystScore: number, overlayVetoScore: number): Verdict {
+  // A measured information shock is a falling knife whatever the composite says:
+  // news landed, and prices that fall on news keep drifting the same way.
+  if (catalystScore < 30) return signalScore >= 40 ? "FALLING_KNIFE" : "AVOID";
+
+  // Down-only overlay veto: a genuinely weak business caps an otherwise decent
+  // signal at Watchlist. It cannot lift a weak signal.
+  const overlayFloorOk = overlayVetoScore >= 45;
+
+  if (signalScore >= 62 && catalystScore >= 60 && overlayFloorOk) return "BUY_THE_DIP";
+  if (signalScore >= 50 && catalystScore >= 55 && overlayFloorOk) return "ACCUMULATE";
+  if (signalScore >= 38) return "WATCHLIST";
+  if (signalScore >= 25) return "FALLING_KNIFE";
   return "AVOID";
 }
 
@@ -259,16 +335,43 @@ function buildThesis(s: StockInput, t: Technicals, dipScore: number, verdict: Ve
   }
 }
 
-export function analyze(stock: StockInput, realSeries?: PricePoint[]): Analysis {
+/**
+ * Universe context needed to measure *why* a stock fell. Supplied by the market
+ * loader, which holds every name's series. Absent for a single-name analysis,
+ * in which case the catalyst pillar stays neutral rather than assumed.
+ */
+export interface MarketContext {
+  /** Market factor series (a real index, or a cap-weighted basket of names). */
+  market: PricePoint[];
+  /** Every available name's series, keyed by ticker, for peer baskets. */
+  universe: Map<string, PricePoint[]>;
+}
+
+export function analyze(
+  stock: StockInput,
+  realSeries?: PricePoint[],
+  context?: MarketContext,
+): Analysis {
   // Prefer a genuine price history when the live provider supplies one; fall
   // back to the deterministic synthetic series for the simulated snapshot.
   const series = realSeries && realSeries.length >= 60 ? realSeries : buildSeries(stock);
   const technicals = computeTechnicals(stock, series);
 
+  // Measure the cause of the dip when we have the market and peer context to
+  // do it. This is what replaces the old hand-authored catalyst constant.
+  const decomposition = context
+    ? decomposeDip({
+        series,
+        peers: stock.peers,
+        universe: context.universe,
+        market: context.market,
+      })
+    : undefined;
+
   const quality = scoreQuality(stock);
   const valuation = scoreValuation(stock);
   const dipCharacter = scoreDipCharacter(stock, technicals);
-  const catalyst = scoreCatalyst(stock);
+  const catalyst = scoreCatalyst(stock, decomposition);
   const technical = scoreTechnical(stock, technicals);
   const flow = scoreFlow(stock, quality.score);
 
@@ -277,14 +380,42 @@ export function analyze(stock: StockInput, realSeries?: PricePoint[]): Analysis 
     pillars.reduce((sum, p) => sum + p.score * PILLAR_META[p.key].weight, 0),
   );
 
-  const verdict = verdictFor(dipScore, catalyst.score, quality.score);
-  const spread = Math.max(...pillars.map((p) => p.score)) - Math.min(...pillars.map((p) => p.score));
-  const conviction = spread < 35 && (dipScore >= 65 || dipScore < 40) ? "HIGH" : spread < 55 ? "MODERATE" : "LOW";
+  // The two published sub-scores: what the tape says (tested) vs the desk's
+  // standing read (context).
+  const signalScore = compositeOf(pillars, SIGNAL_KEYS);
+  const overlayKeys = new Set<PillarKey>(
+    pillars.map((p) => p.key).filter((k) => !SIGNAL_KEYS.has(k)),
+  );
+  const overlayScore = compositeOf(pillars, overlayKeys);
 
-  const plan = buildPlan(stock, technicals, dipScore, verdict);
+  const verdict = verdictFor(signalScore, catalyst.score, overlayScore);
+  const spread = Math.max(...pillars.map((p) => p.score)) - Math.min(...pillars.map((p) => p.score));
+  const conviction =
+    spread < 35 && (signalScore >= 62 || signalScore < 38)
+      ? "HIGH"
+      : spread < 55
+        ? "MODERATE"
+        : "LOW";
+
+  const plan = buildPlan(stock, technicals, signalScore, verdict);
   const riskFlags = buildRiskFlags(stock, technicals, pillars);
-  const thesis = buildThesis(stock, technicals, dipScore, verdict);
+  const thesis = buildThesis(stock, technicals, signalScore, verdict);
   const isDip = stock.dipPctWeek < 0;
 
-  return { stock, series, technicals, pillars, dipScore, verdict, conviction, thesis, riskFlags, plan, isDip };
+  return {
+    stock,
+    series,
+    technicals,
+    pillars,
+    dipScore,
+    signalScore,
+    overlayScore,
+    verdict,
+    conviction,
+    thesis,
+    riskFlags,
+    plan,
+    isDip,
+    decomposition,
+  };
 }

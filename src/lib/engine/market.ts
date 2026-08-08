@@ -1,8 +1,10 @@
 import { SIMULATED_UNIVERSE } from "@/data/simulated";
-import { analyze } from "./analyst";
+import { analyze, type MarketContext } from "./analyst";
+import { buildSeries } from "./series";
 import { buildLiveUniverse } from "./live";
+import { buildMarketFactor } from "./decompose";
 import { getIndexQuote, hasFmpKey } from "./providers/fmp";
-import type { Analysis, Verdict } from "@/lib/types";
+import type { Analysis, PricePoint, StockInput, Verdict } from "@/lib/types";
 
 export type DataMode = "LIVE" | "SIMULATED";
 
@@ -45,10 +47,33 @@ const SIMULATED_INDICES: IndexQuote[] = [
 
 const SIMULATED_LABEL = "08 JUL 2026 · 16:00 ET";
 
+/**
+ * Builds the market/peer context the catalyst decomposition needs, from a set
+ * of named series. The market factor is a cap-weighted basket of the members
+ * themselves: on the free tier a real index series (SPY) may not resolve, and a
+ * mega-cap basket carries the same systematic factor these names load on. When
+ * caps are unknown it degrades to equal weight.
+ */
+function buildContext(members: { input: StockInput; series: PricePoint[] }[]): MarketContext {
+  const universe = new Map<string, PricePoint[]>(
+    members.map((m) => [m.input.ticker, m.series]),
+  );
+  const market = buildMarketFactor(
+    members.map((m) => ({ series: m.series, weight: m.input.marketCapB > 0 ? m.input.marketCapB : 1 })),
+  );
+  return { market, universe };
+}
+
 let simulatedCache: Analysis[] | null = null;
 function simulatedAnalyses(): Analysis[] {
   if (!simulatedCache) {
-    simulatedCache = SIMULATED_UNIVERSE.map((s) => analyze(s)).sort((a, b) => b.dipScore - a.dipScore);
+    // Synthesise each name's series once, then decompose against the basket of
+    // them, so simulated mode exercises the same code path as live.
+    const members = SIMULATED_UNIVERSE.map((input) => ({ input, series: buildSeries(input) }));
+    const context = buildContext(members);
+    simulatedCache = members
+      .map((m) => analyze(m.input, m.series, context))
+      .sort((a, b) => b.signalScore - a.signalScore);
   }
   return simulatedCache;
 }
@@ -113,9 +138,10 @@ export async function loadMarket(): Promise<MarketData> {
     const reason = err instanceof Error ? err.message : "Live feed unavailable";
     return getSimulatedMarket(reason);
   }
+  const context = buildContext(live.map((s) => ({ input: s.input, series: s.series })));
   const analyses = live
-    .map((s) => analyze(s.input, s.series))
-    .sort((a, b) => b.dipScore - a.dipScore);
+    .map((s) => analyze(s.input, s.series, context))
+    .sort((a, b) => b.signalScore - a.signalScore);
   // Live index quotes only — never substitute the simulated strip in live
   // mode, or the context bar would show stale numbers labelled as live. A
   // failure here defaults to an empty array rather than dropping a good

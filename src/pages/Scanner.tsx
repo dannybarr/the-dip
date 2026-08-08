@@ -48,7 +48,7 @@ export default function Scanner() {
     if (verdictFilter !== "ALL") r = r.filter((a) => a.verdict === verdictFilter);
     if (sector !== "ALL") r = r.filter((a) => a.stock.sector === sector);
     const sorters: Record<SortKey, (x: typeof r[number]) => number> = {
-      score: (x) => -x.dipScore,
+      score: (x) => -x.signalScore,
       day: (x) => x.stock.dipPctDay,
       week: (x) => x.stock.dipPctWeek,
       cap: (x) => -x.stock.marketCapB,
@@ -124,7 +124,7 @@ export default function Scanner() {
                   </div>
                   <div className="mt-2 flex items-center justify-between">
                     <VerdictBadge verdict={a.verdict} />
-                    <ScoreBar score={a.dipScore} />
+                    <ScoreBar score={a.signalScore} />
                   </div>
                   <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-muted-foreground">{a.stock.deskNote}</p>
                 </Link>
@@ -234,7 +234,7 @@ export default function Scanner() {
                       <td className="px-3 py-1.5">
                         <Sparkline series={a.series} width={72} height={22} points={40} />
                       </td>
-                      <td className="px-3 py-2.5"><ScoreBar score={a.dipScore} /></td>
+                      <td className="px-3 py-2.5"><ScoreBar score={a.signalScore} /></td>
                       <td className="px-3 py-2.5"><VerdictBadge verdict={a.verdict} /></td>
                     </tr>
                   ))}
@@ -258,7 +258,7 @@ export default function Scanner() {
                     <span className="font-mono text-sm font-bold text-foreground">{a.stock.ticker}</span>
                     <VerdictBadge verdict={a.verdict} />
                   </div>
-                  <div className="num mt-1 text-xs text-down">{fmtPct(a.stock.dipPctWeek)} wk · score {a.dipScore}</div>
+                  <div className="num mt-1 text-xs text-down">{fmtPct(a.stock.dipPctWeek)} wk · score {a.signalScore}</div>
                   <p className="mt-1.5 line-clamp-2 text-[11px] leading-relaxed text-muted-foreground">{a.stock.deskNote}</p>
                 </Link>
               ))}

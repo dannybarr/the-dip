@@ -113,7 +113,7 @@ export default function Watchlist() {
                     <td className={cn("num px-3 py-2.5", a.stock.dipPctDay < 0 ? "text-down" : "text-up")}>{fmtPct(a.stock.dipPctDay)}</td>
                     <td className={cn("num px-3 py-2.5", a.stock.dipPctWeek < 0 ? "text-down" : "text-up")}>{fmtPct(a.stock.dipPctWeek)}</td>
                     <td className="px-3 py-1.5"><Sparkline series={a.series} width={72} height={22} points={40} /></td>
-                    <td className="px-3 py-2.5"><ScoreBar score={a.dipScore} /></td>
+                    <td className="px-3 py-2.5"><ScoreBar score={a.signalScore} /></td>
                     <td className="px-3 py-2.5"><VerdictBadge verdict={a.verdict} /></td>
                     <td className="px-3 py-2.5"><EntryCell ticker={pos.ticker} entryPrice={pos.entryPrice} sizePct={pos.sizePct} /></td>
                     <td className={cn("num px-3 py-2.5 font-semibold", pnl == null ? "text-muted-foreground" : pnl >= 0 ? "text-up" : "text-down")}>

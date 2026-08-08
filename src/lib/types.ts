@@ -1,4 +1,5 @@
 /** Core domain types for The Dip research platform. */
+import type { DipDecomposition } from "@/lib/engine/decompose";
 
 export type CatalystType =
   | "earnings_miss"
@@ -82,6 +83,12 @@ export interface PricePoint {
   /** ISO date */
   d: string;
   c: number;
+  /**
+   * Session open. Optional: real tape carries it, the synthetic series used in
+   * simulated mode does not. Present, it separates overnight gaps (how news
+   * arrives) from intraday drift (how flow behaves).
+   */
+  o?: number;
 }
 
 export interface Technicals {
@@ -131,17 +138,27 @@ export type PillarKey =
 
 export const PILLAR_META: Record<PillarKey, { label: string; weight: number; blurb: string }> = {
   quality:      { label: "Business Quality",  weight: 0.22, blurb: "Moat, returns on capital, margins, balance sheet" },
-  catalyst:     { label: "Catalyst Severity", weight: 0.22, blurb: "Is the driver transient noise or earnings impairment?" },
+  catalyst:     { label: "Catalyst Character", weight: 0.22, blurb: "Measured cause of the fall: market, sector or company-specific" },
   valuation:    { label: "Valuation Reset",   weight: 0.18, blurb: "Discount vs own history, sector and growth" },
   dipCharacter: { label: "Dip Character",     weight: 0.18, blurb: "Speed, depth vs volatility, capitulation signature" },
   technical:    { label: "Technical Setup",   weight: 0.12, blurb: "Oversold readings, proximity to major support" },
   flow:         { label: "Flow & Sentiment",  weight: 0.08, blurb: "Volume signature, short interest, crowding" },
 };
 
+/**
+ * Where a pillar's inputs come from, which decides whether it belongs in the
+ * backtestable Signal Score or the hand-authored Overlay View.
+ * - `signal`: derived from live price/fundamentals, point-in-time, testable.
+ * - `overlay`: hand-authored desk judgment, a static snapshot, not testable.
+ * - `mixed`: blends both (e.g. live P/E measured against an authored 5y norm).
+ */
+export type PillarProvenance = "signal" | "overlay" | "mixed";
+
 export interface PillarScore {
   key: PillarKey;
   score: number; // 0–100
   note: string;
+  provenance: PillarProvenance;
 }
 
 export interface TradePlan {
@@ -163,7 +180,16 @@ export interface Analysis {
   series: PricePoint[];
   technicals: Technicals;
   pillars: PillarScore[];
+  /** Composite of all pillars. Retained for continuity of display. */
   dipScore: number;
+  /**
+   * Composite of the price-derived (`signal` + `mixed`) pillars only. This is
+   * the number the backtest can honestly validate and the one the verdict is
+   * driven by. Overlay pillars inform context and can veto down, never up.
+   */
+  signalScore: number;
+  /** Composite of the hand-authored (`overlay`) pillars. Context, not a signal. */
+  overlayScore: number;
   verdict: Verdict;
   conviction: "HIGH" | "MODERATE" | "LOW";
   thesis: string;
@@ -172,4 +198,7 @@ export interface Analysis {
   /** True when the name is in a genuine weekly dip (dipPctWeek < 0). The dip
    *  engine's thesis and trade plan are only meaningful when this holds. */
   isDip: boolean;
+  /** How this dip decomposes into market, sector and company-specific parts.
+   *  Absent when no universe context was supplied to the engine. */
+  decomposition?: DipDecomposition;
 }

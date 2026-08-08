@@ -2,6 +2,7 @@ import { Link, useParams } from "react-router-dom";
 import { useMarket } from "@/context/MarketProvider";
 import { LoadingView } from "@/components/terminal/DataState";
 import { CATALYST_LABELS, VERDICT_META } from "@/lib/types";
+import { DIP_CAUSE_LABELS } from "@/lib/engine/decompose";
 import { fmtCap, fmtPct, fmtPct1, fmtPrice, fmtX } from "@/lib/fmt";
 import { PriceChart } from "@/components/terminal/PriceChart";
 import { PillarBars } from "@/components/terminal/PillarBars";
@@ -43,6 +44,22 @@ function PlanCell({ label, value, tone, hint }: { label: string; value: string; 
   );
 }
 
+/** Signed contribution bar for the dip decomposition. Width is the part's
+ *  share of the total move; red for a drag, green for a lift. */
+function DecompBar({ label, value, total, accent }: { label: string; value: number; total: number; accent?: boolean }) {
+  const share = total !== 0 ? Math.min(100, Math.abs(value / total) * 100) : 0;
+  const down = value < 0;
+  return (
+    <div className="flex items-center gap-3">
+      <span className={cn("w-32 shrink-0 text-[11px]", accent ? "font-semibold text-foreground" : "text-muted-foreground")}>{label}</span>
+      <div className="h-[6px] flex-1 overflow-hidden rounded-full bg-panel-2">
+        <div className={cn("h-full rounded-full", down ? "bg-down" : "bg-up")} style={{ width: `${share}%` }} />
+      </div>
+      <span className={cn("num w-14 text-right text-xs font-semibold", down ? "text-down" : "text-up")}>{fmtPct1(value)}</span>
+    </div>
+  );
+}
+
 export default function StockAnalysis() {
   const { ticker = "" } = useParams();
   const { analyses, byTicker, isLoading } = useMarket();
@@ -63,7 +80,7 @@ export default function StockAnalysis() {
     );
   }
 
-  const { stock: s, technicals: t, plan, pillars, dipScore, verdict, conviction, thesis, riskFlags, isDip } = analysis;
+  const { stock: s, technicals: t, plan, pillars, dipScore, signalScore, overlayScore, decomposition, verdict, conviction, thesis, riskFlags, isDip } = analysis;
   const f = s.fundamentals;
   const peers = s.peers.map((p) => analyses.find((a) => a.stock.ticker === p)).filter(Boolean);
 
@@ -103,12 +120,18 @@ export default function StockAnalysis() {
 
       {/* Verdict banner */}
       <section className="panel flex flex-col gap-5 p-5 md:flex-row md:items-center">
-        <ScoreDial score={dipScore} />
+        <div className="flex flex-col items-center gap-2">
+          <ScoreDial score={signalScore} label="Signal Score" />
+          <div className="flex gap-3">
+            <span className="micro">Composite <span className="num font-semibold text-foreground">{dipScore}</span></span>
+            <span className="micro">Overlay <span className="num font-semibold text-foreground">{overlayScore}</span></span>
+          </div>
+        </div>
         <div className="flex-1">
           <div className="flex flex-wrap items-center gap-3">
             <VerdictBadge verdict={verdict} size="lg" />
             <span className="micro">Conviction: <span className={cn(conviction === "HIGH" ? "text-gold" : "text-foreground")}>{conviction}</span></span>
-            <span className="micro">Catalyst: {CATALYST_LABELS[s.catalyst.type]}</span>
+            <span className="micro">Cause: {DIP_CAUSE_LABELS[decomposition?.cause ?? "UNKNOWN"]}</span>
           </div>
           <p className="mt-3 max-w-3xl text-sm leading-relaxed text-foreground/90">{thesis}</p>
           <p className="mt-2 text-xs italic text-muted-foreground">“{s.deskNote}”<span className="not-italic"> (Desk note)</span></p>
@@ -165,28 +188,38 @@ export default function StockAnalysis() {
             )}
           </section>
 
-          {/* Catalyst */}
+          {/* Catalyst — measured decomposition of why the stock fell */}
           <section className="panel">
             <div className="panel-title">
-              <h2 className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-foreground">Catalyst Read</h2>
-              <span className="micro ml-auto">{s.catalyst.date ? `${s.catalyst.date} · ` : "Desk thesis · "}{CATALYST_LABELS[s.catalyst.type]}</span>
+              <h2 className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-foreground">Why It Fell</h2>
+              <span className="micro ml-auto">Measured from price · {DIP_CAUSE_LABELS[decomposition?.cause ?? "UNKNOWN"]}</span>
             </div>
             <div className="p-4">
-              <h3 className="text-sm font-semibold text-foreground">{s.catalyst.headline}</h3>
-              <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">{s.catalyst.detail}</p>
-              <div className="mt-4 grid max-w-md grid-cols-2 gap-4">
-                <div>
-                  <div className="micro mb-1.5">Earnings Impairment {s.catalyst.severity}/10</div>
-                  <div className="h-[5px] overflow-hidden rounded-full bg-panel-2">
-                    <div className="h-full rounded-full bg-down" style={{ width: `${s.catalyst.severity * 10}%` }} />
+              {decomposition && decomposition.cause !== "UNKNOWN" ? (
+                <>
+                  <p className="text-[13px] leading-relaxed text-foreground/90">{decomposition.note}</p>
+                  <div className="mt-4 space-y-2">
+                    <DecompBar label="Market beta" value={decomposition.marketPct} total={decomposition.totalPct} />
+                    <DecompBar label="Sector rotation" value={decomposition.sectorPct} total={decomposition.totalPct} />
+                    <DecompBar label="Company-specific" value={decomposition.idioPct} total={decomposition.totalPct} accent />
                   </div>
-                </div>
-                <div>
-                  <div className="micro mb-1.5">Transience {s.catalyst.transience}/10</div>
-                  <div className="h-[5px] overflow-hidden rounded-full bg-panel-2">
-                    <div className="h-full rounded-full bg-up" style={{ width: `${s.catalyst.transience * 10}%` }} />
+                  <div className="mt-4 grid max-w-md grid-cols-2 gap-x-6 gap-y-1.5">
+                    <Row label="Residual (sigma)" value={`${decomposition.residualZ.toFixed(1)}σ`} tone={decomposition.residualZ <= -2 ? "down" : undefined} />
+                    <Row label="Systematic share" value={fmtPct1(decomposition.systematicShare * 100, false)} />
+                    <Row label="Overnight gap share" value={decomposition.gapShare === null ? "n/a" : fmtPct1(decomposition.gapShare * 100, false)} />
+                    <Row label="Confidence" value={decomposition.confidence} />
                   </div>
-                </div>
+                </>
+              ) : (
+                <p className="text-[13px] leading-relaxed text-muted-foreground">
+                  The cause of this move could not be measured without a market and peer context. The catalyst is treated as undetermined rather than assumed benign.
+                </p>
+              )}
+              <div className="mt-5 border-t border-hairline pt-4">
+                <div className="micro mb-1.5">Desk standing read · {CATALYST_LABELS[s.catalyst.type]}</div>
+                <h3 className="text-sm font-semibold text-foreground">{s.catalyst.headline}</h3>
+                <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">{s.catalyst.detail}</p>
+                <p className="mt-2 text-[11px] italic text-muted-foreground/70">Context only. This standing thesis no longer feeds the score.</p>
               </div>
             </div>
           </section>
@@ -295,7 +328,7 @@ export default function StockAnalysis() {
                       <VerDot verdict={p.verdict} />{p.stock.ticker}
                     </span>
                     <span className={cn("num text-xs", p.stock.dipPctWeek < 0 ? "text-down" : "text-up")}>{fmtPct(p.stock.dipPctWeek)} wk</span>
-                    <span className="num text-xs text-muted-foreground">score {p.dipScore}</span>
+                    <span className="num text-xs text-muted-foreground">score {p.signalScore}</span>
                   </Link>
                 ))}
               </div>

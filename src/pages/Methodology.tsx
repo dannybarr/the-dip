@@ -10,10 +10,10 @@ const PILLAR_DETAIL: Record<PillarKey, string[]> = {
     "Balance sheet: net cash scores best; leverage above 2.5x EBITDA triggers a risk flag",
   ],
   catalyst: [
-    "Every dip has a cause. We classify it (earnings miss, guidance cut, macro, sympathy, downgrade, regulatory, competitive, structural, cost shock, no-news) and grade two dimensions",
-    "Severity (0–10): how much long-term earnings power is actually impaired by the news",
-    "Transience (0–10): how likely the driver is to be temporary and mean-reverting",
-    "Structural impairment with weak quality triggers a hard AVOID override: no composite score can rescue it",
+    "Every dip has a cause, and we measure it from price rather than assume it. The stock's return is regressed on a market factor and an orthogonalised peer basket over the prior 120 sessions, splitting the fall into market beta, sector rotation and a company-specific residual",
+    "A move the market or sector caused is not impairment: the business did not change, and it recovers when the tape does. These score well",
+    "A company-specific fall is graded by how unusual it is (residual sigma) and how it arrived: an overnight gap is the fingerprint of news, an intraday bleed the fingerprint of flow",
+    "An idiosyncratic move with an information signature is treated as a falling knife. Prices that fall on news keep drifting the same way for weeks (post-earnings-announcement drift), so this is the dip to leave alone, and it hard-caps the verdict regardless of the rest of the composite",
   ],
   valuation: [
     "Discount vs the stock's own 5-year average forward multiple: the market's memory of what it paid for this quality",
@@ -39,11 +39,11 @@ const PILLAR_DETAIL: Record<PillarKey, string[]> = {
 };
 
 const VERDICT_DETAIL: Array<{ v: Verdict; range: string; text: string }> = [
-  { v: "BUY_THE_DIP", range: "75–100 + gates", text: "A transient problem in a permanent business, at a genuine discount, with a capitulation tape. Requires the composite AND passing catalyst and quality gates: a great score built on a rotten reason to fall never earns a buy. Deploy at full suggested size with the plan's stop." },
-  { v: "ACCUMULATE", range: "63–74 + gate", text: "The thesis is right but timing confidence is lower, and the catalyst gate must still clear. Scale in across the entry zone in 2–3 tranches instead of calling the exact low." },
-  { v: "WATCHLIST", range: "48–62", text: "The dip removed excess without creating a bargain, or the catalyst has real substance. No edge in being early: set alerts and wait. Names with strong composites but failed catalyst gates also land here." },
-  { v: "FALLING_KNIFE", range: "32–47", text: "Orderly, persistent selling on a contested or deteriorating story. These patterns continue more often than they reverse. Stand aside." },
-  { v: "AVOID", range: "0–31", text: "Earnings power is impaired or the balance sheet cannot carry the wait. Cheapness is a description, not a thesis." },
+  { v: "BUY_THE_DIP", range: "Signal ≥ 62 + gates", text: "A measured non-impairing cause (market or sector, not company-specific news), a stretched, capitulatory tape, and a business the overlay does not veto. Requires the Signal Score AND a passing catalyst gate: a great tape on a rotten reason to fall never earns a buy. Deploy at full suggested size with the plan's stop." },
+  { v: "ACCUMULATE", range: "Signal ≥ 50 + gates", text: "The signal is right but timing confidence is lower, and the catalyst gate must still clear. Scale in across the entry zone in 2–3 tranches instead of calling the exact low." },
+  { v: "WATCHLIST", range: "Signal ≥ 38", text: "The dip removed excess without creating a clear edge, or the overlay vetoes the business quality. No edge in being early: set alerts and wait." },
+  { v: "FALLING_KNIFE", range: "Signal ≥ 25, or shock", text: "Orderly, persistent selling, or a company-specific fall with an information signature. These patterns continue more often than they reverse. Stand aside." },
+  { v: "AVOID", range: "Signal < 25", text: "Weak on every price-derived axis, or an information shock with no floor beneath it. Cheapness is a description, not a thesis." },
 ];
 
 export default function Methodology() {
