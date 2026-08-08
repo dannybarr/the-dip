@@ -80,9 +80,15 @@ function scoreDipCharacter(s: StockInput, t: Technicals): PillarScore {
   const overshoot = scale(t.dipZScore, 0.8, 3.5); // dips beyond ~2.5σ overshoot fundamentals
   const speed = scale(Math.abs(s.dipPctDay) / Math.max(Math.abs(s.dipPctWeek), 0.1), 0.25, 1); // one-day shock > slow bleed
   const capitulation = scale(s.volumeRatio, 1, 3.5);
-  const notBrokenTrend = scale(-Math.abs(t.drawdownFrom52wHighPct), -55, -8);
 
-  const score = overshoot * 0.35 + capitulation * 0.3 + speed * 0.15 + notBrokenTrend * 0.2;
+  // A `notBrokenTrend` term used to carry 20% here, rewarding names that had
+  // fallen least from their high. It was a trend-following term inside a
+  // mean-reversion pillar, and it inverted the pillar: measured over the covered
+  // universe, drawdown-from-high has rank IC -0.065 against 60-day forward
+  // returns (deeper drawdowns reverted harder) while the pillar scored them
+  // down. Trend belongs at the portfolio and regime level, not as a score
+  // booster on a dip. See lessons/trend-terms-inverted-the-reversion-pillars.md
+  const score = overshoot * 0.45 + capitulation * 0.35 + speed * 0.2;
 
   let note: string;
   if (score >= 65)
@@ -161,10 +167,14 @@ function scoreTechnical(s: StockInput, t: Technicals): PillarScore {
   const oversold = scale(-t.rsi14, -55, -22); // RSI 22 → 100, RSI 55 → 0
   // A shelf only counts if it exists; fresh 52-week lows have nothing beneath them.
   const supportDist = t.supportDefined ? scale(-((s.price - t.supportLevel) / s.price) * 100, -12, -0.5) : 0;
-  // Oversold in an uptrend is a pullback; oversold in a downtrend is just Tuesday.
-  const trendIntact = s.price > t.sma200 ? 85 : scale((s.price / t.sma200 - 1) * 100, -35, -5);
 
-  const score = oversold * 0.4 + supportDist * 0.25 + trendIntact * 0.35;
+  // A `trendIntact` term used to carry 35% here on the theory that "oversold in
+  // an uptrend is a pullback, oversold in a downtrend is just Tuesday". Measured,
+  // it did the opposite: RSI has rank IC -0.039 against forward returns (more
+  // oversold, better return) yet this pillar scored -0.032, because the trend
+  // term outweighed and reversed its own best input. Downtrend protection is the
+  // catalyst gate's job, where it is measurable.
+  const score = oversold * 0.65 + supportDist * 0.35;
 
   let note: string;
   if (!t.supportDefined)
@@ -174,7 +184,7 @@ function scoreTechnical(s: StockInput, t: Technicals): PillarScore {
   else if (score >= 40)
     note = `Stretched but not extreme: RSI ${t.rsi14.toFixed(0)}, support at $${t.supportLevel.toFixed(2)}. A tradeable level exists, though the tape hasn't fully reset.`;
   else
-    note = `No technical floor in sight: RSI ${t.rsi14.toFixed(0)} with the 200-day at $${t.sma200.toFixed(2)} ${s.price < t.sma200 ? "overhead as resistance" : "far below"}. Structure must repair first.`;
+    note = `Not yet stretched: RSI ${t.rsi14.toFixed(0)}, with support at $${t.supportLevel.toFixed(2)} some way below. The tape has not reset far enough to pay for the risk. (200-day sits at $${t.sma200.toFixed(2)}, context only: trend does not score here.)`;
   return { key: "technical", score: Math.round(score), note, provenance: "signal" };
 }
 

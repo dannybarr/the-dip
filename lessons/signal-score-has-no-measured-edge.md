@@ -76,5 +76,23 @@ there; and a present-day ticker list excludes every name that dipped and never
 recovered, which is precisely the failure mode dip-buying needs to be measured
 against. Widen to a survivorship-free universe before recalibrating anything.
 
-Related: [[authored-inputs-masquerading-as-signal]],
+## Superseded in part, same day
+
+Two follow-ups changed these conclusions and should be read with this file:
+
+- The null result was an aggregation fault, not an absence of signal. Two
+  trend-following terms inside the mean-reversion pillars were reversing their
+  own inputs. Removing them took IC from 0.020 to 0.070 at 60 sessions and
+  flipped the quintile spread positive at every horizon. See
+  [[trend-terms-inverted-the-reversion-pillars]].
+- "The shock/no-news split is not supported" holds only unconditionally. Split by
+  market regime, shock underperforms exactly as predicted inside a bull regime
+  (+1.29% vs +3.67% at 60 sessions) and inverts in a bear one. See
+  [[regime-dominates-dip-returns]].
+
+What still stands from this file: the score is not tradeable, the universe cannot
+settle the question, and nothing here should size a position.
+
+Related: [[trend-terms-inverted-the-reversion-pillars]],
+[[regime-dominates-dip-returns]], [[authored-inputs-masquerading-as-signal]],
 [[dip-engine-assumes-negative-move]], [[fmp-free-tier-constraints]]
