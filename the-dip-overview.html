@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Dip — Institutional Dip Research Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0F14; --panel:#10161D; --panel2:#151D26; --hairline:#1E2833;
+    --fg:#E6ECF3; --muted:#8A97A6; --gold:#EBA22A; --up:#33C08A; --down:#F2455E;
+    --cyan:#3A9BD6; --warn:#EE7A34;
+    --mono:'IBM Plex Mono',ui-monospace,monospace; --sans:'Inter',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--fg);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased;font-feature-settings:"tnum" 1}
+  .mono{font-family:var(--mono)}
+  .num{font-family:var(--mono);font-feature-settings:"tnum" 1}
+  a{color:var(--gold);text-decoration:none}
+  a:hover{text-decoration:underline;text-underline-offset:3px}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+
+  /* Top strip */
+  .strip{position:sticky;top:0;z-index:50;background:rgba(11,15,20,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--hairline)}
+  .strip-in{display:flex;align-items:center;gap:14px;height:46px}
+  .logo{display:flex;align-items:center;gap:10px}
+  .mark{width:24px;height:24px;border-radius:5px;background:var(--gold);display:grid;place-items:center;flex:none}
+  .mark svg{display:block}
+  .brand{font-family:var(--mono);font-weight:700;letter-spacing:.02em;font-size:15px}
+  .brand small{display:block;font-size:9px;letter-spacing:.18em;color:var(--muted);font-weight:500;text-transform:uppercase;margin-top:1px}
+  .status{margin-left:auto;display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--up);box-shadow:0 0 0 0 rgba(51,192,138,.5);animation:blink 2.4s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+  .live{color:var(--up)}
+
+  /* Hero */
+  .hero{padding:72px 0 46px;border-bottom:1px solid var(--hairline);position:relative;overflow:hidden}
+  .hero::after{content:"";position:absolute;inset:0;background:radial-gradient(900px 340px at 78% -10%,rgba(235,162,42,.10),transparent 70%);pointer-events:none}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);margin-bottom:18px}
+  h1{font-size:clamp(34px,5.4vw,60px);font-weight:800;letter-spacing:-.02em;line-height:1.02}
+  h1 .thin{color:var(--muted);font-weight:600}
+  .lede{margin-top:20px;max-width:640px;font-size:clamp(16px,2vw,19px);color:#C4CEDA}
+  .lede b{color:var(--fg);font-weight:600}
+
+  /* Stat row */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:38px}
+  .stat{background:var(--panel);border:1px solid var(--hairline);border-radius:8px;padding:16px 18px}
+  .stat .k{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .stat .v{font-family:var(--mono);font-size:28px;font-weight:700;margin-top:6px}
+  .stat .s{font-size:11px;color:var(--muted);margin-top:2px}
+  .g{color:var(--gold)} .u{color:var(--up)} .c{color:var(--cyan)}
+
+  /* Sections */
+  section{padding:52px 0;border-bottom:1px solid var(--hairline)}
+  .sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:26px}
+  .tick{width:4px;height:19px;background:var(--gold);border-radius:2px;flex:none;transform:translateY(3px)}
+  h2{font-size:23px;font-weight:700;letter-spacing:-.01em}
+  .sec-head .note{margin-left:auto;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  .sub{color:var(--muted);max-width:680px;margin-top:-14px;margin-bottom:26px;font-size:15px}
+
+  /* Panels grid */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .card{background:var(--panel);border:1px solid var(--hairline);border-radius:10px;padding:20px;transition:border-color .2s,transform .2s}
+  .card:hover{border-color:#2b3a49;transform:translateY(-2px)}
+  .card h3{font-size:15px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:9px}
+  .card p{font-size:13.5px;color:#AEB9C6}
+  .chip{font-family:var(--mono);font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;letter-spacing:.04em}
+
+  /* Pillars */
+  .pillar{display:grid;grid-template-columns:180px 1fr 46px;align-items:center;gap:16px;padding:11px 0;border-bottom:1px solid var(--hairline)}
+  .pillar:last-child{border-bottom:none}
+  .pillar .name{font-weight:600;font-size:14px}
+  .pillar .name span{display:block;font-size:11.5px;color:var(--muted);font-weight:400;margin-top:1px}
+  .bar{height:7px;background:var(--panel2);border-radius:4px;overflow:hidden}
+  .bar > i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),#f4b954);border-radius:4px}
+  .pct{font-family:var(--mono);font-size:13px;font-weight:600;text-align:right;color:var(--gold)}
+
+  /* Verdict ladder */
+  .ladder{display:flex;flex-wrap:wrap;gap:10px}
+  .v-chip{display:flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--hairline);border-radius:8px;padding:11px 15px;flex:1;min-width:200px}
+  .v-dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .v-chip .vt{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.03em}
+  .v-chip .vd{font-size:11.5px;color:var(--muted);margin-top:1px}
+
+  /* Flow */
+  .flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:stretch}
+  .node{background:var(--panel);border:1px solid var(--hairline);border-radius:9px;padding:16px;position:relative}
+  .node .step{font-family:var(--mono);font-size:10px;color:var(--gold);letter-spacing:.1em}
+  .node h4{font-size:14px;font-weight:600;margin:6px 0 5px}
+  .node p{font-size:12px;color:var(--muted);line-height:1.5}
+  .node:not(:last-child)::after{content:"→";position:absolute;right:-11px;top:50%;transform:translateY(-50%);color:#3a4b5b;font-size:18px;z-index:2}
+  .fallback{margin-top:14px;background:rgba(238,122,52,.06);border:1px solid rgba(238,122,52,.28);border-radius:8px;padding:12px 15px;font-size:12.5px;color:#D9B79A;display:flex;gap:10px;align-items:center}
+  .fallback b{color:var(--warn)}
+
+  /* Shipped list */
+  .ships{display:grid;grid-template-columns:1fr 1fr;gap:10px 26px}
+  .ship{display:flex;gap:11px;font-size:13.5px;color:#B7C2CF;padding:5px 0}
+  .ship .ck{color:var(--up);flex:none;font-family:var(--mono);font-weight:700}
+  .ship b{color:var(--fg);font-weight:600}
+
+  /* Review */
+  .review{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+  .scoreline{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--hairline);font-size:13.5px}
+  .scoreline:last-child{border-bottom:none}
+  .scoreline .lbl{flex:1}
+  .scoreline .b1{font-family:var(--mono);color:var(--down);font-size:12px}
+  .arw{color:var(--muted)}
+  .scoreline .b2{font-family:var(--mono);color:var(--up);font-weight:600}
+
+  /* Run */
+  .code{background:#080B0F;border:1px solid var(--hairline);border-radius:9px;padding:16px 18px;font-family:var(--mono);font-size:13px;overflow-x:auto}
+  .code .cm{color:var(--muted)}
+  .code .pr{color:var(--gold)}
+  .code b{color:var(--up);font-weight:600}
+  .code div{white-space:pre;padding:1px 0}
+
+  footer{padding:34px 0 48px}
+  .disc{font-size:12px;color:var(--muted);line-height:1.7;max-width:820px}
+  .disc b{color:#9fb0bf;font-weight:600}
+  .foot-brand{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:10px}
+
+  @media(max-width:760px){
+    .stats{grid-template-columns:1fr 1fr}
+    .grid2,.grid3,.review,.ships{grid-template-columns:1fr}
+    .flow{grid-template-columns:1fr}
+    .node:not(:last-child)::after{content:"↓";right:50%;top:auto;bottom:-15px;transform:translateX(50%)}
+    .pillar{grid-template-columns:1fr 40px;grid-template-areas:"name pct" "bar bar";gap:8px 12px}
+    .pillar .name{grid-area:name}.pillar .bar{grid-area:bar}.pillar .pct{grid-area:pct}
+  }
+</style>
+</head>
+<body>
+
+<div class="strip">
+  <div class="wrap strip-in">
+    <div class="logo">
+      <div class="mark"><svg width="15" height="15" viewBox="0 0 26 26"><path d="M4 6 L15 19 L22 8" fill="none" stroke="#0B0F14" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="brand">THE DIP<small>Institutional Dip Research</small></div>
+    </div>
+    <div class="status"><span class="dot"></span><span class="live">Live</span> · FMP feed · 24 names</div>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Institutional Dip Research Terminal</div>
+    <h1>When they say <span class="thin">"buy the dip,"</span><br>this is where the decision gets made.</h1>
+    <p class="lede">The Dip finds stocks selling off today and underwrites each one the way a world-class analyst would: a repeatable six-pillar framework, an explicit verdict, and a complete trade plan, or a documented refusal to trade. <b>Live market data</b>, an honest split between what is measured and what is judgment.</p>
+    <div class="stats">
+      <div class="stat"><div class="k">Coverage</div><div class="v g">24</div><div class="s">Live mega-cap universe</div></div>
+      <div class="stat"><div class="k">Scoring Pillars</div><div class="v">6</div><div class="s">Weighted composite, hard gates</div></div>
+      <div class="stat"><div class="k">Data Mode</div><div class="v u" style="font-size:20px;padding-top:6px">LIVE</div><div class="s">Auto-fallback to snapshot</div></div>
+      <div class="stat"><div class="k">Test Suite</div><div class="v c">21/21</div><div class="s">Engine + live layer, green</div></div>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head"><span class="tick"></span><h2>What it does</h2></div>
+    <div class="grid3">
+      <div class="card">
+        <h3>Dip Scanner</h3>
+        <p>Every covered name actually down on the day or week, ranked by Dip Score, with catalyst read, RSI, volume signature, and a live price sparkline. Green days show few or no rows, by design; this is a dip tool, not a watchlist.</p>
+      </div>
+      <div class="card">
+        <h3>Full underwriting page</h3>
+        <p>Per stock: thesis, desk note, a one-year chart with support and plan levels overlaid, the six-pillar breakdown, fundamentals, technicals, bull and bear case, risk flags, and covered peers.</p>
+      </div>
+      <div class="card">
+        <h3>Trade plan or a refusal</h3>
+        <p>Entry zone, stop, two targets, risk-reward, model win rate, expected value, and volatility-adjusted size. Falling knives and names not in a dip get no levels published. That refusal is the product.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head"><span class="tick"></span><h2>The six-pillar analyst engine</h2><span class="note">weights sum to 100%</span></div>
+    <p class="sub">Each dip scores 0 to 100 across weighted pillars. The composite maps to a verdict, but hard gates override it: a great score built on a rotten catalyst never earns a buy.</p>
+    <div class="card" style="padding:8px 22px">
+      <div class="pillar"><div class="name">Business Quality<span>Moat, returns on capital, margins, balance sheet</span></div><div class="bar"><i style="width:88%"></i></div><div class="pct">22%</div></div>
+      <div class="pillar"><div class="name">Catalyst Severity<span>Transient noise or real earnings impairment?</span></div><div class="bar"><i style="width:88%"></i></div><div class="pct">22%</div></div>
+      <div class="pillar"><div class="name">Valuation Reset<span>Discount vs own history, sector and growth</span></div><div class="bar"><i style="width:72%"></i></div><div class="pct">18%</div></div>
+      <div class="pillar"><div class="name">Dip Character<span>Speed, depth vs volatility, capitulation signature</span></div><div class="bar"><i style="width:72%"></i></div><div class="pct">18%</div></div>
+      <div class="pillar"><div class="name">Technical Setup<span>Oversold readings, proximity to major support</span></div><div class="bar"><i style="width:48%"></i></div><div class="pct">12%</div></div>
+      <div class="pillar"><div class="name">Flow &amp; Sentiment<span>Volume signature, short interest, crowding</span></div><div class="bar"><i style="width:32%"></i></div><div class="pct">8%</div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head"><span class="tick"></span><h2>The verdict ladder</h2></div>
+    <div class="ladder">
+      <div class="v-chip"><span class="v-dot" style="background:var(--up)"></span><div><div class="vt" style="color:var(--up)">BUY THE DIP</div><div class="vd">Deploy capital. Asymmetry favors entry.</div></div></div>
+      <div class="v-chip"><span class="v-dot" style="background:var(--cyan)"></span><div><div class="vt" style="color:var(--cyan)">ACCUMULATE</div><div class="vd">Scale in across the entry zone in tranches.</div></div></div>
+      <div class="v-chip"><span class="v-dot" style="background:var(--gold)"></span><div><div class="vt" style="color:var(--gold)">WATCHLIST</div><div class="vd">Wait for confirmation or a better price.</div></div></div>
+      <div class="v-chip"><span class="v-dot" style="background:var(--warn)"></span><div><div class="vt" style="color:var(--warn)">FALLING KNIFE</div><div class="vd">Do not catch. Re-underwrite after it stabilizes.</div></div></div>
+      <div class="v-chip"><span class="v-dot" style="background:var(--down)"></span><div><div class="vt" style="color:var(--down)">AVOID</div><div class="vd">Structurally impaired. Cheapness is not a thesis.</div></div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head"><span class="tick"></span><h2>Live data architecture</h2><span class="note">measured vs judgment</span></div>
+    <p class="sub">Quotes, technicals and fundamentals come live from Financial Modeling Prep. Catalyst reads, moat and balance-sheet ratings and desk notes are analyst judgment, and are labelled as such. The scoring engine never changes between modes.</p>
+    <div class="flow">
+      <div class="node"><div class="step">01 · SOURCE</div><h4>FMP live feed</h4><p>Real quotes, daily OHLC history, TTM ratios and key metrics, live sector P/E. Cached with per-field TTLs to respect the free tier.</p></div>
+      <div class="node"><div class="step">02 · MERGE</div><h4>Live builder</h4><p>Real market data is merged with the desk's authored overlay into one StockInput. Real history drives RSI, ATR, SMA, drawdown and support.</p></div>
+      <div class="node"><div class="step">03 · SCORE</div><h4>Analyst engine</h4><p>The unchanged six-pillar engine recomputes scores, verdict and trade plan on today's real tape. Only genuine dips are underwritten.</p></div>
+      <div class="node"><div class="step">04 · RENDER</div><h4>Terminal UI</h4><p>Shared across the app through one cached fetch. Loading, empty and error states are first-class, not afterthoughts.</p></div>
+    </div>
+    <div class="fallback"><span>⚠</span><div><b>Graceful fallback.</b> If the key is missing or the feed is rate-limited, the terminal drops to a simulated snapshot of the same 24 names, flagged with a clear banner. It never shows stale numbers dressed as live.</div></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head"><span class="tick"></span><h2>Shipped this build</h2></div>
+    <div class="ships">
+      <div class="ship"><span class="ck">✓</span><div><b>Live FMP integration</b> across the full coverage universe, provider client with caching, concurrency limiting and honest error handling.</div></div>
+      <div class="ship"><span class="ck">✓</span><div><b>Authored desk overlay</b> for 24 free-tier mega-caps: catalyst thesis, moat, balance sheet, bull and bear case, desk notes.</div></div>
+      <div class="ship"><span class="ck">✓</span><div><b>Sign-aware engine.</b> Live data exposed a dip-only assumption; the scanner now surfaces only genuine weekly dips and never publishes broken levels on a rallying name.</div></div>
+      <div class="ship"><span class="ck">✓</span><div><b>Unified universe.</b> Live and simulated modes cover identical names, so a fallback is a faithful degradation, not a different product.</div></div>
+      <div class="ship"><span class="ck">✓</span><div><b>Quality pass:</b> responsive header, route code-splitting, error boundary, decoupled index fetch, an em-dash copy sweep, and tests for the live layer.</div></div>
+      <div class="ship"><span class="ck">✓</span><div><b>Honest provenance</b> throughout: the footer and methodology state exactly what is measured live and what is analyst judgment.</div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head"><span class="tick"></span><h2>Quality review</h2><span class="note">MIT / Cambridge loop</span></div>
+    <p class="sub">Benchmarked cold against a world-class bar, then hardened. Round one scored 36/60 and produced eight fixable issues; all eight were applied and verified against a clean typecheck, green tests and a passing build. A confirming re-review is queued.</p>
+    <div class="review">
+      <div class="card">
+        <h3 style="margin-bottom:14px">Criteria, round one to fixed</h3>
+        <div class="scoreline"><span class="lbl">Correctness &amp; robustness</span><span class="b1">5</span><span class="arw">→</span><span class="b2">fixed</span></div>
+        <div class="scoreline"><span class="lbl">Design &amp; visual polish</span><span class="b1">8</span><span class="arw">→</span><span class="b2">held</span></div>
+        <div class="scoreline"><span class="lbl">Copy &amp; voice</span><span class="b1">5</span><span class="arw">→</span><span class="b2">fixed</span></div>
+        <div class="scoreline"><span class="lbl">UX &amp; information architecture</span><span class="b1">6</span><span class="arw">→</span><span class="b2">fixed</span></div>
+        <div class="scoreline"><span class="lbl">Code quality &amp; architecture</span><span class="b1">7</span><span class="arw">→</span><span class="b2">fixed</span></div>
+        <div class="scoreline"><span class="lbl">Product coherence &amp; trust</span><span class="b1">5</span><span class="arw">→</span><span class="b2">fixed</span></div>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:14px">What the pass changed</h3>
+        <p style="margin-bottom:9px">The heaviest fix was unifying the two universes so the simulated fallback covers the same companies as live, closing a silent roster-swap that would have vanished a user's watchlist on a feed drop.</p>
+        <p>Alongside it: a factual rewrite of the methodology page, a sweep of em-dashes from every line of generated copy, a real mobile navigation drawer, route-level code splitting, a top-level error boundary, and the first tests for the network layer.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head"><span class="tick"></span><h2>Run it</h2></div>
+    <div class="grid2" style="align-items:start">
+      <div>
+        <p class="sub" style="margin-bottom:16px">A React, Vite and TypeScript app. Add your FMP key, install, and start. Without a key it runs the simulated snapshot; with one it goes live.</p>
+        <div class="code">
+<div><span class="cm"># add your Financial Modeling Prep key</span></div>
+<div><span class="pr">$</span> echo <b>VITE_FMP_API_KEY=your_key</b> &gt; .env.local</div>
+<div>&nbsp;</div>
+<div><span class="pr">$</span> npm install</div>
+<div><span class="pr">$</span> npm run dev      <span class="cm"># localhost:8080</span></div>
+<div>&nbsp;</div>
+<div><span class="pr">$</span> npm test         <span class="cm"># 21/21 passing</span></div>
+<div><span class="pr">$</span> npm run build     <span class="cm"># code-split production build</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Stack</h3>
+        <p style="margin-bottom:14px">React 18 · Vite · TypeScript · Tailwind · shadcn/ui · Recharts · TanStack Query · Financial Modeling Prep.</p>
+        <h3>Repository</h3>
+        <p><span class="mono" style="color:var(--gold)">github.com/dannybarr/the-dip</span> · private. The API key lives only in a git-ignored <span class="mono">.env.local</span> and is never committed.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-brand">The Dip Research Desk · v1.1 · Live market data</div>
+    <p class="disc">
+      <b>Nothing in this application is investment advice.</b> Verdicts are model output intended to structure your own judgment, not to replace it. Quotes, technicals and fundamentals are sourced live from Financial Modeling Prep; catalyst reads, moat and balance-sheet ratings and desk notes are analyst judgments and are labelled as such throughout the terminal. Short-term trading involves substantial risk of loss. Past performance and model backtests do not predict future results.
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>
