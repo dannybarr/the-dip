@@ -11,6 +11,9 @@ const Scanner = lazy(() => import("./pages/Scanner.tsx"));
 const StockAnalysis = lazy(() => import("./pages/StockAnalysis.tsx"));
 const Watchlist = lazy(() => import("./pages/Watchlist.tsx"));
 const Methodology = lazy(() => import("./pages/Methodology.tsx"));
+const AngelHurdle = lazy(() => import("./pages/AngelHurdle.tsx"));
+const AngelDeals = lazy(() => import("./pages/AngelDeals.tsx"));
+const AngelPortfolio = lazy(() => import("./pages/AngelPortfolio.tsx"));
 
 const queryClient = new QueryClient();
 
@@ -70,6 +73,9 @@ const App = () => (
                 <Route path="/stock/:ticker" element={<StockAnalysis />} />
                 <Route path="/watchlist" element={<Watchlist />} />
                 <Route path="/methodology" element={<Methodology />} />
+                <Route path="/angel" element={<AngelHurdle />} />
+                <Route path="/angel/deals" element={<AngelDeals />} />
+                <Route path="/angel/portfolio" element={<AngelPortfolio />} />
                 <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>

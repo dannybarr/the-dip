@@ -13,7 +13,10 @@ import { Menu, RefreshCw, Search } from "lucide-react";
 const NAV = [
   { to: "/", label: "Dip Scanner", key: "F1" },
   { to: "/watchlist", label: "Watchlist", key: "F2" },
-  { to: "/methodology", label: "Methodology", key: "F3" },
+  { to: "/angel", label: "Angel", key: "F3" },
+  { to: "/angel/deals", label: "Live Raises", key: "F4" },
+  { to: "/angel/portfolio", label: "Deployment", key: "F5" },
+  { to: "/methodology", label: "Methodology", key: "F6" },
 ];
 
 function TickerSearch() {
