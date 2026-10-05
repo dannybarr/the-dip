@@ -321,8 +321,8 @@ def test_bootstrap(res, n_boot):
     sh = np.array(sh)
     sd = rets.std(ddof=1)
     need = int(np.ceil((1.96 * sd / max(abs(rets.mean()), 1e-9)) ** 2)) if len(rets) > 2 else None
-    out = dict(n_trades=len(rets), mean_pct=round(rets.mean() * 100, 3),
-               ci95_pct=[round(lo * 100, 3), round(hi * 100, 3)],
+    out = dict(n_trades=len(rets), mean_pct=round(float(rets.mean()) * 100, 3),
+               ci95_pct=[round(float(lo) * 100, 3), round(float(hi) * 100, 3)],
                p_mean_positive=round(float((boots > 0).mean()), 4),
                sharpe_ci95=[round(float(np.percentile(sh, 2.5)), 2),
                             round(float(np.percentile(sh, 97.5)), 2)],
@@ -340,7 +340,7 @@ def test_stability(res):
     if tf is not None and len(tf):
         tf = tf.copy()
         tf["year"] = pd.to_datetime(tf["exit_date"]).dt.year
-        out["by_year"] = {int(y): dict(n=int(len(g)), exp_pct=round(g["ret"].mean() * 100, 3),
+        out["by_year"] = {int(y): dict(n=int(len(g)), exp_pct=round(float(g["ret"].mean()) * 100, 3),
                                        win=round(float((g["ret"] > 0).mean()), 3))
                           for y, g in tf.groupby("year")}
     d = oos_curve(res).pct_change().dropna()
