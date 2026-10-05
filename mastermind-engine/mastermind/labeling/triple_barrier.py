@@ -82,6 +82,11 @@ def triple_barrier_labels(
                 resolved = True
                 break
         if not resolved:
+            if i + vertical_days > n - 1:
+                # The window was cut short by the end of the data, so a "timeout"
+                # here is not a real outcome — leave it unresolved (NaN). Otherwise a
+                # live scan would train on the newest rows as false non-wins.
+                continue
             labels[i] = 0.0
             rets[i] = (close[end] - entry) / entry
             holds[i] = end - i

@@ -76,14 +76,20 @@ class NicheSelector:
         if n_events < 3:
             return None
 
-        # Outcome of those events, from the (point-in-time) triple-barrier labels.
+        # Outcome of those events, from the triple-barrier labels. A label at row i
+        # looks FORWARD up to `vertical_days` bars, so a row near the cutoff has an
+        # outcome that is not knowable at `as_of`. Keep only events whose barrier was
+        # touched on or before the cutoff bar (point-in-time; no peeking).
+        cut_pos = int(idx.searchsorted(cutoff, side="right")) - 1
+        resolved = labels.touch_idx.reindex(f.index) <= cut_pos
+        trigger = trigger & resolved
+        n_events = int(trigger.sum())
+        if n_events < 3:
+            return None
         lab = labels.label.reindex(f.index)
         ret = labels.ret.reindex(f.index)
         ev_lab = lab[trigger]
         ev_ret = ret[trigger]
-        # Only count events whose label resolved by the cutoff (no peeking) — the
-        # triple-barrier already resolves within the horizon, and we've masked to
-        # cutoff, so trailing unresolved rows are naturally excluded.
         wins = (ev_lab == 1).sum()
         recovery_winrate = wins / max(len(ev_lab.dropna()), 1)
         mean_recovery_edge = float(ev_ret.mean()) if len(ev_ret.dropna()) else 0.0

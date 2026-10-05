@@ -81,6 +81,7 @@ backtest:
   initial_equity: 100000
   commission_bps: 2.0
   slippage_bps: 5.0
+  gap_aware_exits: true
   train_window_days: 504
   test_window_days: 90
   purge_days: 20

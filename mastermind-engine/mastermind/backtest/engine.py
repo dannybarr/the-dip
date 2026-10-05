@@ -224,12 +224,13 @@ class WalkForwardBacktester:
                     proceeds = pos["shares"] * exit_price * (1 - cost)
                     cash += proceeds
                     entry_notional = pos["shares"] * pos["entry"]
-                    net = proceeds - entry_notional * (1 + cost) + entry_notional * cost
-                    ret = (proceeds / (entry_notional * (1 + cost))) - 1.0
+                    # Entry fill already includes slippage; entry pays commission only.
+                    entry_cost = entry_notional * (1 + commission)
+                    ret = proceeds / entry_cost - 1.0
                     trades.append(Trade(
                         ticker=t, entry_date=pos["entry_date"], exit_date=today,
                         entry=pos["entry"], exit=exit_price, shares=pos["shares"],
-                        ret=ret, pnl=proceeds - entry_notional * (1 + cost),
+                        ret=ret, pnl=proceeds - entry_cost,
                         reason=reason, conviction=pos["conviction"], edge=pos["edge"],
                     ))
                     del open_pos[t]
@@ -324,13 +325,15 @@ class WalkForwardBacktester:
                 })
         return out
 
-    @staticmethod
-    def _check_exit(pos, bar, today):
+    def _check_exit(self, pos, bar, today):
         low, high, close = float(bar["low"]), float(bar["high"]), float(bar["close"])
+        open_ = float(bar["open"])
+        gap_aware = self.cfg.get("backtest.gap_aware_exits", True)
         if low <= pos["stop"]:
-            return pos["stop"], "stop"
+            # A gap through the stop fills at the (worse) open, not the stop price.
+            return (min(pos["stop"], open_) if gap_aware else pos["stop"]), "stop"
         if high >= pos["target"]:
-            return pos["target"], "target"
+            return (max(pos["target"], open_) if gap_aware else pos["target"]), "target"
         if today >= pos["max_exit"]:
             return close, "time"
         return None, ""
