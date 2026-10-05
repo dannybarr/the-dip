@@ -87,7 +87,7 @@ def fmt(d: dict) -> str:
 
 
 # ---------------------------------------------------------------- 0. causality audit
-def test_causality(cfg, universe, adapter, quick):
+def test_causality(cfg, universe, adapter, quick, r_full=None):
     out = {}
     pipe = FeaturePipeline(cfg)
     names = list(universe)[:3 if quick else 5]
@@ -160,7 +160,7 @@ def test_causality(cfg, universe, adapter, quick):
         keep = len(next(iter(universe.values()))) - 220
         trunc = {t: df.iloc[:keep] for t, df in universe.items()}
         cut_date = next(iter(trunc.values())).index[-1]
-        r_full = run_bt(cfg, universe, adapter, {})
+        r_full = r_full if r_full is not None else run_bt(cfg, universe, adapter, {})
         r_tr = run_bt(cfg, trunc, adapter, {})
         horizon = cut_date - pd.Timedelta(days=30)
         key = lambda r: {(x.ticker, x.entry_date, x.exit_date, round(x.ret, 8))
@@ -490,8 +490,6 @@ def main():
         with open(args.out + ".json", "w") as fh:
             json.dump(RESULTS, fh, indent=2, default=str)
 
-    guarded("causality", test_causality, cfg, universe, adapter, q)
-
     cache: dict = {}
     base = {}
 
@@ -503,6 +501,7 @@ def main():
             f"{fmt(RESULTS['baseline'])}")
     guarded("baseline", baseline)
     res = base.get("res")
+    guarded("causality", test_causality, cfg, universe, adapter, q, res)
     if res is not None:
         guarded("costs", test_costs, cfg, universe, adapter, cache)
         guarded("exits", test_exits, cfg, universe, adapter, cache)
