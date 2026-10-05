@@ -120,6 +120,12 @@ you can trial them immutably via `Config.with_overrides({...})`. Key knobs: the 
 horizon, triple-barrier ATR multiples, the conviction/edge floors, the risk budget and
 portfolio caps, and the walk-forward windows.
 
+## Status: validated infrastructure, NOT a validated alpha
+
+A stress test on real data ([`STRESS_TEST.md`](STRESS_TEST.md)) found no edge over random
+entries and losses on unseen universes. The causality checks, backtester, null tests
+and self-review are trustworthy; the trading signal is not yet. Do not deploy capital.
+
 ## What "done" means for Step 1
 
 This is **Step 1: research foundation + a runnable, tested initial model** — deliberately

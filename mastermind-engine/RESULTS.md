@@ -1,5 +1,14 @@
 # Validation Results — Step 1
 
+> **CORRECTION (stress test, see [`STRESS_TEST.md`](STRESS_TEST.md)).** Stages 5-9 below
+> were written before the engine was stress-tested. The stress test found three
+> defects (fixed) and showed that on real data the engine **does not beat random
+> entries** (+0.19% vs +0.32% per trade, p=0.64), **loses money on two unseen
+> universes**, and that the "Sharpe 0.62" sweep result was in-sample (about 0.2-0.4
+> out-of-sample, and worse on unseen stocks). Statements below that the real-data edge
+> is "real but thin" over-reached: the evidence supports "no demonstrated edge". The
+> synthetic-data results only show the pipeline can find an edge the generator plants.
+
 > Honest, reproducible record of how the initial model was validated and tuned on the
 > `SyntheticAdapter` (which embeds the exact inefficiencies the engine targets, so a
 > correct engine *should* find edge and a broken one should not). All figures are
@@ -128,7 +137,7 @@ python scripts/run_sweep.py    --csv data_cache/sp500 --config config/real_sp500
 |---|---|---|---|---|---|---|---|
 | 85 | 42.4% | **1.10** | **+0.14%/trade** | 0.2% | 0.10 | −3.9% | MARGINAL |
 
-**Read this honestly.** The edge is **real but thin**. Target exits average **+3.5%**
+**Read this honestly (superseded by the stress test: no demonstrated edge).** The edge looked **thin but positive**. Target exits average **+3.5%**
 and stops **−2.4%** — the payoff asymmetry the engine is built to harvest is present —
 but a 42% win rate on *price-only* signals (no fundamentals, no news feed via CSV) in
 ultra-liquid mega-caps, net of 14 bps round-trip costs, leaves only a sliver of Sharpe.

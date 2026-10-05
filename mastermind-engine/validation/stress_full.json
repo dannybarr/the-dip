@@ -1,0 +1,309 @@
+{
+  "baseline": {
+    "trades": 85,
+    "win": 0.412,
+    "pf": 1.14,
+    "exp": 0.189,
+    "cagr": 0.27,
+    "sharpe": 0.15,
+    "maxdd": -3.29
+  },
+  "causality": {
+    "features_leaking": [],
+    "feature_cells_compared": 218700,
+    "label_mismatches": 0,
+    "niche_mismatches": 0,
+    "e2e_trades_full": 54,
+    "e2e_trades_truncated": 54,
+    "e2e_only_in_full": 0,
+    "e2e_only_in_truncated": 0
+  },
+  "costs": {
+    "1x": {
+      "trades": 85,
+      "win": 0.412,
+      "pf": 1.14,
+      "exp": 0.189,
+      "cagr": 0.27,
+      "sharpe": 0.15,
+      "maxdd": -3.29
+    },
+    "2x": {
+      "trades": 85,
+      "win": 0.412,
+      "pf": 1.03,
+      "exp": 0.048,
+      "cagr": 0.04,
+      "sharpe": 0.03,
+      "maxdd": -3.64
+    },
+    "3x": {
+      "trades": 85,
+      "win": 0.412,
+      "pf": 0.94,
+      "exp": -0.092,
+      "cagr": -0.19,
+      "sharpe": -0.09,
+      "maxdd": -4.0
+    },
+    "5x": {
+      "trades": 85,
+      "win": 0.412,
+      "pf": 0.78,
+      "exp": -0.371,
+      "cagr": -0.63,
+      "sharpe": -0.32,
+      "maxdd": -4.7
+    }
+  },
+  "exits": {
+    "naive_stop_fill": {
+      "trades": 85,
+      "win": 0.424,
+      "pf": 1.17,
+      "exp": 0.227,
+      "cagr": 0.32,
+      "sharpe": 0.18,
+      "maxdd": -3.22
+    },
+    "gap_aware": {
+      "trades": 85,
+      "win": 0.412,
+      "pf": 1.14,
+      "exp": 0.189,
+      "cagr": 0.27,
+      "sharpe": 0.15,
+      "maxdd": -3.29
+    }
+  },
+  "null": {
+    "engine_mean_pct": 0.189,
+    "n_trades": 85,
+    "harness_fidelity": "60/60",
+    "null_random_dates_mean_pct": 0.321,
+    "null_random_dates_p95_pct": 0.936,
+    "p_value_random_dates": 0.636,
+    "null_same_dates_mean_pct": 0.492,
+    "null_same_dates_p95_pct": 1.035,
+    "p_value_same_dates": 0.818
+  },
+  "bootstrap": {
+    "n_trades": 85,
+    "mean_pct": 0.189,
+    "ci95_pct": [
+      -0.546,
+      0.935
+    ],
+    "p_mean_positive": 0.6913,
+    "sharpe_ci95": [
+      -0.72,
+      1.13
+    ],
+    "p_sharpe_positive": 0.6747,
+    "trades_needed_for_95pct_significance": 1312
+  },
+  "stability": {
+    "by_year": {
+      "2014": {
+        "n": 20,
+        "exp_pct": 0.671,
+        "win": 0.45
+      },
+      "2015": {
+        "n": 16,
+        "exp_pct": 0.379,
+        "win": 0.438
+      },
+      "2016": {
+        "n": 18,
+        "exp_pct": -0.564,
+        "win": 0.389
+      },
+      "2017": {
+        "n": 21,
+        "exp_pct": 0.324,
+        "win": 0.429
+      },
+      "2018": {
+        "n": 10,
+        "exp_pct": -0.01,
+        "win": 0.3
+      }
+    },
+    "sharpe_first_half": 0.24,
+    "sharpe_second_half": 0.11
+  },
+  "benchmark": {
+    "period": "2014-06-27 to 2018-02-07",
+    "strategy_cagr_pct": 0.37,
+    "strategy_sharpe": 0.18,
+    "strategy_maxdd_pct": -3.29,
+    "ew_buyhold_cagr_pct": 21.27,
+    "ew_buyhold_sharpe": 1.49,
+    "ew_buyhold_maxdd_pct": -14.38,
+    "beta": 0.033,
+    "alpha_annual_pct": -0.28,
+    "correlation": 0.201
+  },
+  "nested": {
+    "split_date": "2016-04-20",
+    "select_on_A_test_on_B": {
+      "chosen": "niche=4, cooldown=5",
+      "in_sample_sharpe": 1.53,
+      "out_of_sample_sharpe": 0.17,
+      "grid_median_oos_sharpe": 0.03,
+      "grid_best_oos_sharpe_oracle": 0.85,
+      "frac_grid_positive_oos": 0.5,
+      "rank_corr_is_vs_oos": 0.55
+    },
+    "select_on_B_test_on_A": {
+      "chosen": "niche=6, cooldown=3",
+      "in_sample_sharpe": 0.85,
+      "out_of_sample_sharpe": 0.43,
+      "grid_median_oos_sharpe": 0.29,
+      "grid_best_oos_sharpe_oracle": 1.53,
+      "frac_grid_positive_oos": 0.75,
+      "rank_corr_is_vs_oos": 0.55
+    }
+  },
+  "null_universe1": {
+    "engine_mean_pct": -0.369,
+    "n_trades": 54,
+    "harness_fidelity": "54/54",
+    "null_random_dates_mean_pct": -0.107,
+    "null_random_dates_p95_pct": 0.798,
+    "p_value_random_dates": 0.682,
+    "null_same_dates_mean_pct": -0.188,
+    "null_same_dates_p95_pct": 0.625,
+    "p_value_same_dates": 0.658
+  },
+  "null_universe2": {
+    "engine_mean_pct": -0.21,
+    "n_trades": 75,
+    "harness_fidelity": "60/60",
+    "null_random_dates_mean_pct": 0.065,
+    "null_random_dates_p95_pct": 0.811,
+    "p_value_random_dates": 0.732,
+    "null_same_dates_mean_pct": 0.238,
+    "null_same_dates_p95_pct": 0.863,
+    "p_value_same_dates": 0.888
+  },
+  "universes": {
+    "random_1": {
+      "tickers": [
+        "ADSK",
+        "AES",
+        "ANTM",
+        "BIIB",
+        "CSCO",
+        "CTXS",
+        "DFS",
+        "DVN",
+        "GIS",
+        "GPS",
+        "HP",
+        "IR",
+        "L",
+        "LEG",
+        "MSI",
+        "PH",
+        "PSX",
+        "RRC",
+        "SHW",
+        "SLG",
+        "SRE",
+        "STX",
+        "T",
+        "UHS",
+        "UNM"
+      ],
+      "niche6_cd10": {
+        "trades": 54,
+        "win": 0.444,
+        "pf": 0.79,
+        "exp": -0.369,
+        "cagr": -0.21,
+        "sharpe": -0.31,
+        "maxdd": -1.66
+      },
+      "null": {
+        "engine_mean_pct": -0.369,
+        "n_trades": 54,
+        "harness_fidelity": "54/54",
+        "null_random_dates_mean_pct": -0.107,
+        "null_random_dates_p95_pct": 0.798,
+        "p_value_random_dates": 0.682,
+        "null_same_dates_mean_pct": -0.188,
+        "null_same_dates_p95_pct": 0.625,
+        "p_value_same_dates": 0.658
+      },
+      "niche4_cd5": {
+        "trades": 34,
+        "win": 0.353,
+        "pf": 0.6,
+        "exp": -0.904,
+        "cagr": -0.29,
+        "sharpe": -0.51,
+        "maxdd": -2.14
+      }
+    },
+    "random_2": {
+      "tickers": [
+        "ALB",
+        "AON",
+        "ARNC",
+        "BRK.B",
+        "CELG",
+        "CI",
+        "CTL",
+        "D",
+        "DHI",
+        "DOV",
+        "EA",
+        "EOG",
+        "GGP",
+        "HCP",
+        "LKQ",
+        "LNT",
+        "MAR",
+        "NEE",
+        "PEP",
+        "PSX",
+        "RL",
+        "ROST",
+        "RSG",
+        "TDG",
+        "WMB"
+      ],
+      "niche6_cd10": {
+        "trades": 75,
+        "win": 0.427,
+        "pf": 0.88,
+        "exp": -0.21,
+        "cagr": -0.35,
+        "sharpe": -0.17,
+        "maxdd": -5.5
+      },
+      "null": {
+        "engine_mean_pct": -0.21,
+        "n_trades": 75,
+        "harness_fidelity": "60/60",
+        "null_random_dates_mean_pct": 0.065,
+        "null_random_dates_p95_pct": 0.811,
+        "p_value_random_dates": 0.732,
+        "null_same_dates_mean_pct": 0.238,
+        "null_same_dates_p95_pct": 0.863,
+        "p_value_same_dates": 0.888
+      },
+      "niche4_cd5": {
+        "trades": 71,
+        "win": 0.408,
+        "pf": 1.0,
+        "exp": 0.004,
+        "cagr": 0.67,
+        "sharpe": 0.46,
+        "maxdd": -1.48
+      }
+    }
+  }
+}
